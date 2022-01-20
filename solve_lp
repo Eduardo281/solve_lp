@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+
+from ortools.linear_solver import pywraplp
+
+solver = pywraplp.Solver.CreateSolver('SCIP')
+
+infinity = solver.infinity()
+
+x = solver.IntVar(0.0, infinity, 'x')
+y = solver.IntVar(0.0, infinity, 'y')
+
+print('END OF FILE!')
