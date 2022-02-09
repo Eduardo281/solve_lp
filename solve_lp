@@ -1,10 +1,68 @@
 #!/usr/bin/python3
 
 from ortools.linear_solver import pywraplp
+import re
 
 solver = pywraplp.Solver.CreateSolver('SCIP')
-
 infinity = solver.infinity()
+
+c = list()
+b = list()
+A = list()
+present_A_line = 0
+scanning_A_matrix = False
+leq_constraints = '*EMPTY*'
+with open ('solve_lp_ex_mat') as file:
+    for raw_line in file:
+        line = raw_line.strip()
+
+        if(scanning_A_matrix):
+            present_A_line += 1
+            if(re.search('[+-] ', line)):
+                raise RuntimeError('Isolated + or - signal find while reading line {} of A matrix!'.format(present_A_line))
+            A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
+            if(line[-1] == ';'):
+                continue
+            elif(line[-1] == ']'):
+                scanning_A_matrix = False
+            else:
+                raise RuntimeError('Did not find ; at the of {} of A matrix'.format(present_A_line))
+
+        if(re.search('^b[ ]*=[ ]*\[', line)):
+            if(re.search('[+-] ', line)):
+                raise RuntimeError('Isolated + or - signal find while reading b vector!')
+            b = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
+        if(re.search('^c[ ]*=[ ]*\[', line)):
+            if(re.search('[+-] ', line)):
+                raise RuntimeError('Isolated + or - signal find while reading c vector!')
+            c = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
+        if(re.search('^A[ ]*=[ ]*\[', line)):
+            present_A_line = 1
+            if(re.search('[+-] ', line)):
+                raise RuntimeError('Isolated + or - signal find while reading the 1st line of A matrix!')
+            A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
+            if(line[-1] == ']'):
+                scanning_A_matrix = False
+            else:
+                scanning_A_matrix = True
+
+        if(re.search('^leq[ ]*=[ ]*', line)):
+            if(line[-1] == '*'):
+                leq_constraints = '*'
+                continue
+            leq_constraints = int((re.search('[\d]+', line).group(0)))
+
+print('b:')
+print(b)
+print()
+print('c:')
+print(c)
+print()
+print('A:')
+print(A)
+print()
+print('leq:')
+print(leq_constraints)
 
 x = solver.IntVar(0.0, infinity, 'x')
 y = solver.IntVar(0.0, infinity, 'y')
