@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from ortools.linear_solver import pywraplp
+import numpy as np
 import re
 
 solver = pywraplp.Solver.CreateSolver('SCIP')
@@ -9,9 +10,11 @@ infinity = solver.infinity()
 c = list()
 b = list()
 A = list()
+min_obj = True
 present_A_line = 0
 scanning_A_matrix = False
 leq_constraints = '*EMPTY*'
+var_type = dict()
 with open ('solve_lp_ex_mat') as file:
     for raw_line in file:
         line = raw_line.strip()
@@ -26,7 +29,7 @@ with open ('solve_lp_ex_mat') as file:
             elif(line[-1] == ']'):
                 scanning_A_matrix = False
             else:
-                raise RuntimeError('Did not find ; at the of {} of A matrix'.format(present_A_line))
+                raise RuntimeError('Did not find ; at the of line {} of A matrix'.format(present_A_line))
 
         if(re.search('^b[ ]*=[ ]*\[', line)):
             if(re.search('[+-] ', line)):
@@ -52,19 +55,102 @@ with open ('solve_lp_ex_mat') as file:
                 continue
             leq_constraints = int((re.search('[\d]+', line).group(0)))
 
+        if(re.search('^min[ ]*=[ ]*', line)):
+            if(re.search('False$', line)):
+                min_obj = False
+            else:
+                min_obj = True
+
+        if(re.search('^bin[ ]*=[ ]*', line)):
+            print('READING BIN LINE!')
+            continue
+
 print('b:')
 print(b)
+b = np.array(b)
 print()
 print('c:')
+c = np.array(c)
 print(c)
 print()
+A = np.array(A)
 print('A:')
 print(A)
 print()
 print('leq:')
 print(leq_constraints)
 
-x = solver.IntVar(0.0, infinity, 'x')
-y = solver.IntVar(0.0, infinity, 'y')
+if(len(b) != A.shape[0]):
+    raise RuntimeError('Shapes of b and A are incompatible!')
+
+if(len(c) != A.shape[1]):
+    raise RuntimeError('Shapes of c and A are incompatible!')
+
+solver = pywraplp.Solver.CreateSolver('SCIP')
+infinity = solver.infinity()
+x = dict()
+
+m = A.shape[0]
+n = A.shape[1]
+
+var_type = {j: 'real' for j in range(n)}
+for j in range(n):
+    if(var_type[j] == 'real'):
+        x[j] = solver.NumVar(0.0, infinity, 'x[{}]'.format(j))
+    elif(var_type[j] == 'binary'):
+        x[j] = solver.BoolVar('x[{}]'.format(j))
+    else:
+        x[j] = solver.IntVar('x[{}]'.format(j))
+
+# Objective Function
+if(min_obj):
+    obj = solver.Minimize(
+        sum(c[j] * x[j] for j in range(n))
+    )
+else:
+    obj = solver.Maximize(
+        sum(c[j] * x[j] for j in range(n))
+    )
+
+# Adding the constraints sets:
+cstr = dict()
+if(leq_constraints == '*'):
+    for i in range(m):
+        cstr[i] = solver.Add(
+            sum(A[i, j] * x[j] for j in range(n)) <= b[i]
+        )
+else:
+    for i in range(m):
+        if(i <= leq_constraints-1):
+            cstr[i] = solver.Add(
+                sum(A[i, j] * x[j] for j in range(n)) <= b[i]
+            )
+        else:
+            cstr[i] = solver.Add(
+                sum(A[i, j] * x[j] for j in range(n)) == b[i]
+            )
+
+# Setting up the solver configs and solving the problem:
+TOTAL_SOLVING_TIME = 30
+PRINT_SOLUTION_LOG = False
+NUM_THREADS = 1
+
+if(TOTAL_SOLVING_TIME > 0):
+    solver.set_time_limit(TOTAL_SOLVING_TIME * 1000)
+if(PRINT_SOLUTION_LOG):
+    solver.EnableOutput()
+solver.SetNumThreads(NUM_THREADS)
+status = solver.Solve()
+
+# Printing results:
+if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
+    ObjVal = solver.Objective().Value()
+    print('Objective found with value: {}'.format(ObjVal))
+    print('Variables values:')
+    for j in range(n):
+        print('x[{}] = {}'.format(j, round(x[j].solution_value(), 5)))
+else:
+    print('No solution found!')
+
 
 print('END OF FILE!')
