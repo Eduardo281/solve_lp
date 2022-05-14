@@ -5,14 +5,23 @@
 # -t --time: solving time limit (OPTIONAL)
 # -l --log: print solver solution log (OPTIONAL)
 # -s --solver: which solver to be used (OPTIONAL)
+# -z --zeros: omit zero values on solutions (OPTIONAL)
+# -d --digits: number of digits to show on solution and objective (OPTIONAL)
+#
+# -h --help: show package help
 
 from ortools.linear_solver import pywraplp
 import numpy as np
 import re
 
-solver = pywraplp.Solver.CreateSolver('SCIP')
-infinity = solver.infinity()
+# Setting up the solver configs:
+TOTAL_SOLVING_TIME = 30
+PRINT_SOLUTION_LOG = False
+NUM_THREADS = 1
+DIGITS_ON_SOLUTION = 5
+SOLVER_NAME = 'SCIP'
 
+file_name = 'bin_knap_ex_1'
 file_name = 'solve_lp_ex_mat_2'
 
 c = list()
@@ -133,7 +142,8 @@ if(len(b) != A.shape[0]):
 if(len(c) != A.shape[1]):
     raise RuntimeError('Shapes of c and A are incompatible!')
 
-solver = pywraplp.Solver.CreateSolver('SCIP')
+# Creating the optimization model and the variables:
+solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
 infinity = solver.infinity()
 x = dict()
 
@@ -144,15 +154,14 @@ var_type = {j: 'real' for j in range(n)}
 
 if(bin_vars != '*EMPTY*'):
     if(bin_vars == '*'):
-        var_type = {j: 'bin' for j in range(n)}
+        var_type = {j: 'binary' for j in range(n)}
     else:
-        var_type.update({j: 'bin' for j in bin_vars})
+        var_type.update({j: 'binary' for j in bin_vars})
 if(int_vars != '*EMPTY*'):
     if(int_vars == '*'):
         var_type = {j: 'int' for j in range(n)}
     else:
         var_type.update({j: 'int' for j in int_vars})
-
 
 for j in range(n):
     if(var_type[j] == 'real'):
@@ -190,11 +199,7 @@ else:
                 sum(A[i, j] * x[j] for j in range(n)) == b[i]
             )
 
-# Setting up the solver configs and solving the problem:
-TOTAL_SOLVING_TIME = 30
-PRINT_SOLUTION_LOG = False
-NUM_THREADS = 1
-
+# Solving the problem and printing results:
 if(TOTAL_SOLVING_TIME > 0):
     solver.set_time_limit(TOTAL_SOLVING_TIME * 1000)
 if(PRINT_SOLUTION_LOG):
@@ -202,13 +207,13 @@ if(PRINT_SOLUTION_LOG):
 solver.SetNumThreads(NUM_THREADS)
 status = solver.Solve()
 
-# Printing results:
+print('Variables defined: x[{}], ..., x[{}].'.format(0, n-1))
 if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
     ObjVal = solver.Objective().Value()
-    print('Objective found with value: {}'.format(ObjVal))
+    print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
     print('Variables values:')
     for j in range(n):
-        print('x[{}] = {}'.format(j, round(x[j].solution_value(), 5)))
+        print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
 else:
     print('No solution found!')
 
