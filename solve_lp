@@ -1,11 +1,19 @@
 #!/usr/bin/python3
 
+# CLI ideas:
+# -f --file: file name (REQUIRED)
+# -t --time: solving time limit (OPTIONAL)
+# -l --log: print solver solution log (OPTIONAL)
+# -s --solver: which solver to be used (OPTIONAL)
+
 from ortools.linear_solver import pywraplp
 import numpy as np
 import re
 
 solver = pywraplp.Solver.CreateSolver('SCIP')
 infinity = solver.infinity()
+
+file_name = 'solve_lp_ex_mat_2'
 
 c = list()
 b = list()
@@ -14,8 +22,10 @@ min_obj = True
 present_A_line = 0
 scanning_A_matrix = False
 leq_constraints = '*EMPTY*'
+bin_vars = '*EMPTY*'
+int_vars = '*EMPTY*'
 var_type = dict()
-with open ('solve_lp_ex_mat') as file:
+with open (file_name) as file:
     for raw_line in file:
         line = raw_line.strip()
 
@@ -62,7 +72,37 @@ with open ('solve_lp_ex_mat') as file:
                 min_obj = True
 
         if(re.search('^bin[ ]*=[ ]*', line)):
-            print('READING BIN LINE!')
+            if(line[-1] == '*'):
+                bin_vars = '*'
+                continue
+            bin_vars = list()
+            aux_bin_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
+            aux_bin_list = aux_bin_list.strip().split(',')
+            for entry in aux_bin_list:
+                if('-' in entry):
+                    val1, val2 = entry.split('-')
+                    val1 = int(val1.strip())
+                    val2 = int(val2.strip())
+                    bin_vars.extend(list(range(val1, val2+1)))
+                else:
+                    bin_vars.append(int(entry.strip()))
+            continue
+
+        if(re.search('^int[ ]*=[ ]*', line)):
+            if(line[-1] == '*'):
+                int_vars = '*'
+                continue
+            int_vars = list()
+            aux_int_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
+            aux_int_list = aux_int_list.strip().split(',')
+            for entry in aux_int_list:
+                if('-' in entry):
+                    val1, val2 = entry.split('-')
+                    val1 = int(val1.strip())
+                    val2 = int(val2.strip())
+                    int_vars.extend(list(range(val1, val2+1)))
+                else:
+                    int_vars.append(int(entry.strip()))
             continue
 
 print('b:')
@@ -79,6 +119,13 @@ print(A)
 print()
 print('leq:')
 print(leq_constraints)
+print()
+print('bin:')
+print(bin_vars)
+print()
+print('int:')
+print(int_vars)
+print()
 
 if(len(b) != A.shape[0]):
     raise RuntimeError('Shapes of b and A are incompatible!')
@@ -94,13 +141,26 @@ m = A.shape[0]
 n = A.shape[1]
 
 var_type = {j: 'real' for j in range(n)}
+
+if(bin_vars != '*EMPTY*'):
+    if(bin_vars == '*'):
+        var_type = {j: 'bin' for j in range(n)}
+    else:
+        var_type.update({j: 'bin' for j in bin_vars})
+if(int_vars != '*EMPTY*'):
+    if(int_vars == '*'):
+        var_type = {j: 'int' for j in range(n)}
+    else:
+        var_type.update({j: 'int' for j in int_vars})
+
+
 for j in range(n):
     if(var_type[j] == 'real'):
         x[j] = solver.NumVar(0.0, infinity, 'x[{}]'.format(j))
     elif(var_type[j] == 'binary'):
         x[j] = solver.BoolVar('x[{}]'.format(j))
     else:
-        x[j] = solver.IntVar('x[{}]'.format(j))
+        x[j] = solver.IntVar(0, infinity, 'x[{}]'.format(j))
 
 # Objective Function
 if(min_obj):
