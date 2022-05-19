@@ -14,6 +14,8 @@ from ortools.linear_solver import pywraplp
 import numpy as np
 import re
 
+import argparse
+
 # Setting up the solver configs:
 TOTAL_SOLVING_TIME = 30
 PRINT_SOLUTION_LOG = False
@@ -27,12 +29,14 @@ file_name = 'solve_lp_ex_mat_2'
 c = list()
 b = list()
 A = list()
-min_obj = True
 present_A_line = 0
 scanning_A_matrix = False
 leq_constraints = '*EMPTY*'
 bin_vars = '*EMPTY*'
 int_vars = '*EMPTY*'
+obj_type = '*EMPTY*'
+ub_inputs = '*EMPTY*'
+lb_inputs = '*EMPTY*'
 var_type = dict()
 with open (file_name) as file:
     for raw_line in file:
@@ -74,11 +78,27 @@ with open (file_name) as file:
                 continue
             leq_constraints = int((re.search('[\d]+', line).group(0)))
 
-        if(re.search('^min[ ]*=[ ]*', line)):
-            if(re.search('False$', line)):
-                min_obj = False
-            else:
-                min_obj = True
+        if(re.search('^obj[ ]*=[ ]*', line)):
+            if(re.search('min$', line.lower())):
+                obj_type = 'min'
+            elif(re.search('max$', line.lower())):
+                obj_type = 'max'
+
+        if(re.search('^ub[ ]*=[ ]*', line)):
+            try:
+                ub_inputs = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
+            except:
+                ub_inputs = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
+                ub_inputs = ub_inputs.strip().split(',')
+                ub_inputs = np.array(ub_inputs, dtype=float)
+
+        if(re.search('^lb[ ]*=[ ]*', line)):
+            try:
+                lb_inputs = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
+            except:
+                lb_inputs = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
+                lb_inputs = lb_inputs.strip().split(',')
+                lb_inputs = np.array(lb_inputs, dtype=float)
 
         if(re.search('^bin[ ]*=[ ]*', line)):
             if(line[-1] == '*'):
@@ -135,6 +155,15 @@ print()
 print('int:')
 print(int_vars)
 print()
+print('obj_type:')
+print(obj_type)
+print()
+print('ub_inputs:')
+print(ub_inputs)
+print()
+print('lb_inputs:')
+print(lb_inputs)
+print()
 
 if(len(b) != A.shape[0]):
     raise RuntimeError('Shapes of b and A are incompatible!')
@@ -142,13 +171,33 @@ if(len(b) != A.shape[0]):
 if(len(c) != A.shape[1]):
     raise RuntimeError('Shapes of c and A are incompatible!')
 
+m = A.shape[0]
+n = A.shape[1]
+
+if(isinstance(ub_inputs, np.ndarray)):
+    if(len(ub_inputs) != n):
+        raise RuntimeError('Shape of ub array is incompatible with problem size!')
+
+if(isinstance(lb_inputs, np.ndarray)):
+    if(len(lb_inputs) != n):
+        raise RuntimeError('Shape of lb array is incompatible with problem size!')
+
 # Creating the optimization model and the variables:
 solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
 infinity = solver.infinity()
 x = dict()
 
-m = A.shape[0]
-n = A.shape[1]
+if(ub_inputs != '*EMPTY*'):
+    if(isinstance(ub_inputs, float)):
+        ub_inputs = np.full(n, ub_inputs)
+    else:
+        ub_inputs = np.full(n, infinity)
+
+if(lb_inputs != '*EMPTY*'):
+    if(isinstance(lb_inputs, float)):
+        lb_inputs = np.full(n, lb_inputs)
+    else:
+        lb_inputs = np.full(n, infinity)
 
 var_type = {j: 'real' for j in range(n)}
 
@@ -172,14 +221,16 @@ for j in range(n):
         x[j] = solver.IntVar(0, infinity, 'x[{}]'.format(j))
 
 # Objective Function
-if(min_obj):
+if(obj_type == '*EMPTY*' or obj_type == 'min'):
     obj = solver.Minimize(
         sum(c[j] * x[j] for j in range(n))
     )
-else:
+elif(obj_type == 'max'):
     obj = solver.Maximize(
         sum(c[j] * x[j] for j in range(n))
     )
+else:
+    raise RuntimeError('Problem in the objective function type input!')
 
 # Adding the constraints sets:
 cstr = dict()
