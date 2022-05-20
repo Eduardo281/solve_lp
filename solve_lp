@@ -5,7 +5,7 @@
 # -t --time: solving time limit (OPTIONAL) --- DONE!
 # -l --log: print solver solution log (OPTIONAL) --- DONE!
 # -s --solver: which solver to be used (OPTIONAL) --- DONE!
-# -z --zeros: omit zero values on solutions (OPTIONAL)
+# -z --zeros: omit zero values on solutions (OPTIONAL) --- DONE!
 # -d --digits: number of digits to show on solution and objective (OPTIONAL) --- DONE!
 
 from ortools.linear_solver import pywraplp
@@ -23,11 +23,6 @@ def main():
         in large production environments.***'''
     )
 
-    # input_type_parser = parser.add_mutually_exclusive_group(required=False)
-
-    # input_type_parser.add_argument('--matricial_data')
-    # input_type_parser.add_argument('--solve_lp_model_data')
-    
     parser.add_argument('-f', '--file', nargs=1, metavar="INPUT_FILE_PATH", type=str,
         default=None, help= 'Path to the data file to be used', required=True)
     parser.add_argument('-t', '--time', nargs = 1, metavar = "TOTAL_SOLVING_TIME", type = int,
@@ -39,13 +34,19 @@ def main():
     parser.add_argument('-r', '--threads', nargs = 1, metavar='threads_num', type=int,
         default=None, help = 'Number of threads to be used by the solver')
 
-    parser.add_argument('--zeros', dest='zeros', action='store_true')
-    parser.add_argument('--no-zeros', dest='zeros', action='store_false')
-    parser.set_defaults(zeros=False)
+    zeros_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    zeros_meg_parser.add_argument('--zeros', dest='zeros', action='store_true')
+    zeros_meg_parser.add_argument('--no-zeros', dest='zeros', action='store_false')
+    zeros_meg_parser.set_defaults(zeros=False)
 
-    parser.add_argument('--log', dest='log', action='store_true')
-    parser.add_argument('--no-log', dest='log', action='store_false')
-    parser.set_defaults(log=False)
+    log_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    log_meg_parser.add_argument('--log', dest='log', action='store_true')
+    log_meg_parser.add_argument('--no-log', dest='log', action='store_false')
+    log_meg_parser.set_defaults(log=False)
+
+    # input_type_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    # input_type_meg_parser.add_argument('--matricial_data')
+    # input_type_meg_parser.add_argument('--solve_lp_model_data')
 
     args = parser.parse_args()
 
@@ -184,6 +185,11 @@ def main():
                         int_vars.append(int(entry.strip()))
                 continue
 
+    # Creating the optimization model and the variables:
+    solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
+    infinity = solver.infinity()
+    x = dict()
+
     print('b:')
     print(b)
     b = np.array(b)
@@ -227,25 +233,16 @@ def main():
     if(isinstance(ub_inputs, np.ndarray)):
         if(len(ub_inputs) != n):
             raise RuntimeError('Shape of ub array is incompatible with problem size!')
+    elif(isinstance(ub_inputs, float)):
+        ub_inputs = np.full(n, ub_inputs)
+    else:
+        ub_inputs = np.full(n, infinity)
 
     if(isinstance(lb_inputs, np.ndarray)):
         if(len(lb_inputs) != n):
             raise RuntimeError('Shape of lb array is incompatible with problem size!')
-
-    # Creating the optimization model and the variables:
-    solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
-    infinity = solver.infinity()
-    x = dict()
-
-    if(ub_inputs != '*EMPTY*'):
-        if(isinstance(ub_inputs, float)):
-            ub_inputs = np.full(n, ub_inputs)
-    else:
-        ub_inputs = np.full(n, infinity)
-
-    if(lb_inputs != '*EMPTY*'):
-        if(isinstance(lb_inputs, float)):
-            lb_inputs = np.full(n, lb_inputs)
+    elif(isinstance(lb_inputs, float)):
+        lb_inputs = np.full(n, lb_inputs)
     else:
         lb_inputs = np.full(n, 0.0)
 
