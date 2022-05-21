@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser(prog='solve_lp', 
         allow_abbrev=False,
         description = '''Solve_lp is a CLI used to solve linear programming problems in a simple way.''',
-        epilog='''***This is Python3 script built with educational purposes, and so it is not intended to be used
+        epilog='''***This is a Python3 script built with educational purposes, and so it is not intended to be used
         in large production environments.***'''
     )
 
@@ -31,7 +31,7 @@ def main():
         default=None, help = "Which solver to use in the solution procedure.")
     parser.add_argument('-d', '--digits', nargs = 1, metavar = "DIGITS_ON_SOLUTION", type = int,
         default=None, help = "How many digits to be considered in the final solution display.")
-    parser.add_argument('-r', '--threads', nargs = 1, metavar='threads_num', type=int,
+    parser.add_argument('-r', '--threads', nargs = 1, metavar='NUM_THREADS', type=int,
         default=None, help = 'Number of threads to be used by the solver')
 
     zeros_meg_parser = parser.add_mutually_exclusive_group(required=False)
@@ -44,6 +44,11 @@ def main():
     log_meg_parser.add_argument('--no-log', dest='log', action='store_false')
     log_meg_parser.set_defaults(log=False)
 
+    verbose_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    verbose_meg_parser.add_argument('--verbose', dest='verbose', action='store_true')
+    verbose_meg_parser.add_argument('--no-verbose', dest='verbose', action='store_false')
+    verbose_meg_parser.set_defaults(verbose=False)
+
     # input_type_meg_parser = parser.add_mutually_exclusive_group(required=False)
     # input_type_meg_parser.add_argument('--matricial_data')
     # input_type_meg_parser.add_argument('--solve_lp_model_data')
@@ -55,6 +60,7 @@ def main():
 
     PRINT_ZERO_VARS = args.zeros
     PRINT_SOLUTION_LOG = args.log
+    VERBOSE_PRINT = args.verbose
 
     if(args.time):
         TOTAL_SOLVING_TIME = args.time[0]
@@ -75,6 +81,11 @@ def main():
         NUM_THREADS = args.threads[0]
     else:
         NUM_THREADS = 1
+
+    if(VERBOSE_PRINT):
+        print('Solve_LP started!')
+        print()
+        print('Reading input data file...')
 
     # Reading the data file and processing the inputs:
     c = list()
@@ -130,10 +141,10 @@ def main():
                 leq_constraints = int((re.search('[\d]+', line).group(0)))
 
             if(re.search('^obj[ ]*=[ ]*', line)):
-                if(re.search('min$', line.lower())):
-                    obj_type = 'min'
-                elif(re.search('max$', line.lower())):
-                    obj_type = 'max'
+                aux_obj_type = re.search('=(.*)$', line).group(1)
+                obj_type = aux_obj_type.strip().lower()
+                if((obj_type != 'min') and (obj_type != 'max')):
+                    raise RuntimeError('Problem with the objective function specified!')
 
             if(re.search('^ub[ ]*=[ ]*', line)):
                 try:
@@ -185,6 +196,12 @@ def main():
                         int_vars.append(int(entry.strip()))
                 continue
 
+    if(VERBOSE_PRINT):
+        print('Data file was read!')
+        print()
+        print('Starting to instantiate the solver {}...'.format(SOLVER_NAME))
+        print()
+
     # Creating the optimization model and the variables:
     solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
     infinity = solver.infinity()
@@ -220,6 +237,9 @@ def main():
     print('lb_inputs:')
     print(lb_inputs)
     print()
+
+    if(VERBOSE_PRINT):
+        print('Validating data and starting to build the model...')
 
     if(len(b) != A.shape[0]):
         raise RuntimeError('Shapes of b and A are incompatible!')
@@ -298,6 +318,11 @@ def main():
                     sum(A[i, j] * x[j] for j in range(n)) == b[i]
                 )
 
+    if(VERBOSE_PRINT):
+        print('The model is ready!')
+        print()
+        print('Starting the solution procedure...')
+
     # Solving the problem and printing results:
     if(TOTAL_SOLVING_TIME):
         solver.set_time_limit(TOTAL_SOLVING_TIME * 1000)
@@ -305,6 +330,10 @@ def main():
         solver.EnableOutput()
     solver.SetNumThreads(NUM_THREADS)
     status = solver.Solve()
+
+    if(VERBOSE_PRINT):
+        print('The solution procedure is finished!')
+        print()
 
     print('Variables defined: x[{}], ..., x[{}].'.format(0, n-1))
     if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
