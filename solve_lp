@@ -1,16 +1,9 @@
 #!/usr/bin/python3
 
-# CLI ideas:
-# -f --file: file name (REQUIRED) --- DONE!
-# -t --time: solving time limit (OPTIONAL) --- DONE!
-# -l --log: print solver solution log (OPTIONAL) --- DONE!
-# -s --solver: which solver to be used (OPTIONAL) --- DONE!
-# -z --zeros: omit zero values on solutions (OPTIONAL) --- DONE!
-# -d --digits: number of digits to show on solution and objective (OPTIONAL) --- DONE!
-
 from ortools.linear_solver import pywraplp
 import numpy as np
 import re
+import sys
 
 import argparse
 
@@ -20,19 +13,23 @@ def main():
         allow_abbrev=False,
         description = '''Solve_lp is a CLI used to solve linear programming problems in a simple way.''',
         epilog='''***This is a Python3 script built with educational purposes, and so it is not intended to be used
-        in large production environments.***'''
+        in large production environments.***
+        
+        More informations can be found at https://github.com/Eduardo281/solve_lp.'''
     )
 
     parser.add_argument('-f', '--file', nargs=1, metavar="INPUT_FILE_PATH", type=str,
-        default=None, help= 'Path to the data file to be used', required=True)
+        default=None, help= 'Path to the data file to be used')
     parser.add_argument('-t', '--time', nargs = 1, metavar = "TOTAL_SOLVING_TIME", type = int,
         default=None, help = "Total allowed time for the solver to work (in seconds).")
     parser.add_argument('-s', '--solver', nargs = 1, metavar = "SOLVER_NAME", type = str,
-        default=None, help = "Which solver to use in the solution procedure.")
+        default=None, help = "Which solver to use in the solution procedure. Remember that not all solvers can solve Integer/Mixed Integer problems!")
     parser.add_argument('-d', '--digits', nargs = 1, metavar = "DIGITS_ON_SOLUTION", type = int,
         default=None, help = "How many digits to be considered in the final solution display.")
     parser.add_argument('-r', '--threads', nargs = 1, metavar='NUM_THREADS', type=int,
         default=None, help = 'Number of threads to be used by the solver')
+    parser.add_argument('--help-with-solvers', action='store_true', default=None, 
+    dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
 
     zeros_meg_parser = parser.add_mutually_exclusive_group(required=False)
     zeros_meg_parser.add_argument('--zeros', dest='zeros', action='store_true')
@@ -55,12 +52,45 @@ def main():
 
     args = parser.parse_args()
 
+    if(args.PRINT_HELP_WITH_SOLVERS):
+        print('*****')
+        print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
+        print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
+        print("For more information please refer to the solvers/or-tools documentations.")
+        print()
+        print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
+        print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
+        print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
+        print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+        print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
+        print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
+        print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+        print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
+        print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
+        print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+        print('Where...')
+        print('BP = Binary Programming (only binary variables);')
+        print('IP = Integer Programming (integer and/or binary variables)')
+        print('LP = Linear Programming (only real variables)')
+        print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
+        print()
+        print('General notes:')
+        print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
+        print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
+        print('*****')
+        sys.exit(100)
+
+    if(not args.file):
+        raise RuntimeError('The following argument is required: -f/--file')
+
     # Setting up the solver configs:
     INPUT_FILE_PATH = args.file[0]
 
     PRINT_ZERO_VARS = args.zeros
     PRINT_SOLUTION_LOG = args.log
     VERBOSE_PRINT = args.verbose
+
+    ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'SAT', 'SCIP', 'XPRESS']
 
     if(args.time):
         TOTAL_SOLVING_TIME = args.time[0]
@@ -73,6 +103,11 @@ def main():
         DIGITS_ON_SOLUTION = 5
 
     if(args.solver):
+        if(args.solver[0].upper() not in ACCEPTED_SOLVERS):
+            print('The solvers available are:')
+            print(ACCEPTED_SOLVERS)
+            print('Input received was: {}'.format(args.solver[0]))
+            raise ValueError('Did not find solver with the specified name!')
         SOLVER_NAME = args.solver[0]
     else:
         SOLVER_NAME = 'SCIP'
@@ -199,7 +234,7 @@ def main():
     if(VERBOSE_PRINT):
         print('Data file was read!')
         print()
-        print('Starting to instantiate the solver {}...'.format(SOLVER_NAME))
+        print('Starting to instantiate the inputed solver ({})...'.format(SOLVER_NAME.upper()))
         print()
 
     # Creating the optimization model and the variables:
@@ -286,7 +321,7 @@ def main():
         elif(var_type[j] == 'binary'):
             x[j] = solver.BoolVar('x[{}]'.format(j))
         else:
-            x[j] = solver.IntVar(0, infinity, 'x[{}]'.format(j))
+            x[j] = solver.IntVar(lb_inputs[j], ub_inputs[j], 'x[{}]'.format(j))
 
     # Objective Function
     if(obj_type == '*EMPTY*' or obj_type == 'min'):
