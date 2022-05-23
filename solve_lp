@@ -8,6 +8,13 @@ import sys
 import argparse
 
 def main():
+    # Default solve_lp parameters:
+    ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'SAT', 'SCIP', 'XPRESS']
+    DEFAULT_SOLVER = 'SCIP'
+    DEFAULT_SOLVING_TIME = 30
+    DEFAULT_DIGITS_ON_SOLUTION = 5
+    DEFAULT_NUM_THREADS = 1
+
     # Building the argument parser:
     parser = argparse.ArgumentParser(prog='solve_lp', 
         allow_abbrev=False,
@@ -90,17 +97,15 @@ def main():
     PRINT_SOLUTION_LOG = args.log
     VERBOSE_PRINT = args.verbose
 
-    ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'SAT', 'SCIP', 'XPRESS']
-
     if(args.time):
         TOTAL_SOLVING_TIME = args.time[0]
     else:
-        TOTAL_SOLVING_TIME = None
+        TOTAL_SOLVING_TIME = DEFAULT_SOLVING_TIME
     
     if(args.digits):
         DIGITS_ON_SOLUTION = args.digits[0]
     else:
-        DIGITS_ON_SOLUTION = 5
+        DIGITS_ON_SOLUTION = DEFAULT_DIGITS_ON_SOLUTION
 
     if(args.solver):
         if(args.solver[0].upper() not in ACCEPTED_SOLVERS):
@@ -110,12 +115,12 @@ def main():
             raise ValueError('Did not find solver with the specified name!')
         SOLVER_NAME = args.solver[0]
     else:
-        SOLVER_NAME = 'SCIP'
+        SOLVER_NAME = DEFAULT_SOLVER
 
     if(args.threads):
         NUM_THREADS = args.threads[0]
     else:
-        NUM_THREADS = 1
+        NUM_THREADS = DEFAULT_NUM_THREADS
 
     if(VERBOSE_PRINT):
         print('Solve_LP started!')
@@ -240,14 +245,13 @@ def main():
     # Creating the optimization model and the variables:
     solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
     infinity = solver.infinity()
-    x = dict()
 
+    b = np.array(b)
     print('b:')
     print(b)
-    b = np.array(b)
     print()
-    print('c:')
     c = np.array(c)
+    print('c:')
     print(c)
     print()
     A = np.array(A)
@@ -301,36 +305,43 @@ def main():
     else:
         lb_inputs = np.full(n, 0.0)
 
+    A = {((i+1), (j+1)) : A[i][j] for i in range(len(A)) for j in range(len(A[i]))}
+    b = {(j+1) : b[j] for j in range(len(b))}
+    c = {(j+1) : c[j] for j in range(len(c))}
+    var_range = range(1, n+1)
+    row_range = range(1, m+1)
+
     # Creating the model variables:
-    var_type = {j: 'real' for j in range(n)}
+    x = dict()
+    var_type = {j: 'real' for j in var_range}
 
     if(bin_vars != '*EMPTY*'):
         if(bin_vars == '*'):
-            var_type = {j: 'binary' for j in range(n)}
+            var_type = {j: 'binary' for j in var_range}
         else:
             var_type.update({j: 'binary' for j in bin_vars})
     if(int_vars != '*EMPTY*'):
         if(int_vars == '*'):
-            var_type = {j: 'int' for j in range(n)}
+            var_type = {j: 'int' for j in var_range}
         else:
             var_type.update({j: 'int' for j in int_vars})
 
-    for j in range(n):
+    for j in var_range:
         if(var_type[j] == 'real'):
-            x[j] = solver.NumVar(lb_inputs[j], ub_inputs[j], 'x[{}]'.format(j))
+            x[j] = solver.NumVar(lb_inputs[j-1], ub_inputs[j-1], 'x[{}]'.format(j))
         elif(var_type[j] == 'binary'):
             x[j] = solver.BoolVar('x[{}]'.format(j))
         else:
-            x[j] = solver.IntVar(lb_inputs[j], ub_inputs[j], 'x[{}]'.format(j))
+            x[j] = solver.IntVar(lb_inputs[j-1], ub_inputs[j-1], 'x[{}]'.format(j))
 
     # Objective Function
     if(obj_type == '*EMPTY*' or obj_type == 'min'):
         obj = solver.Minimize(
-            sum(c[j] * x[j] for j in range(n))
+            sum(c[j] * x[j] for j in var_range)
         )
     elif(obj_type == 'max'):
         obj = solver.Maximize(
-            sum(c[j] * x[j] for j in range(n))
+            sum(c[j] * x[j] for j in var_range)
         )
     else:
         raise RuntimeError('Problem in the objective function type input!')
@@ -338,19 +349,19 @@ def main():
     # Adding the constraints sets:
     cstr = dict()
     if(leq_constraints == '*'):
-        for i in range(m):
+        for i in row_range:
             cstr[i] = solver.Add(
-                sum(A[i, j] * x[j] for j in range(n)) <= b[i]
+                sum(A[i, j] * x[j] for j in var_range) <= b[i]
             )
     else:
-        for i in range(m):
+        for i in row_range:
             if(i <= leq_constraints-1):
                 cstr[i] = solver.Add(
-                    sum(A[i, j] * x[j] for j in range(n)) <= b[i]
+                    sum(A[i, j] * x[j] for j in var_range) <= b[i]
                 )
             else:
                 cstr[i] = solver.Add(
-                    sum(A[i, j] * x[j] for j in range(n)) == b[i]
+                    sum(A[i, j] * x[j] for j in var_range) == b[i]
                 )
 
     if(VERBOSE_PRINT):
@@ -359,7 +370,7 @@ def main():
         print('Starting the solution procedure...')
 
     # Solving the problem and printing results:
-    if(TOTAL_SOLVING_TIME):
+    if(TOTAL_SOLVING_TIME > 0):
         solver.set_time_limit(TOTAL_SOLVING_TIME * 1000)
     if(PRINT_SOLUTION_LOG):
         solver.EnableOutput()
@@ -370,16 +381,16 @@ def main():
         print('The solution procedure is finished!')
         print()
 
-    print('Variables defined: x[{}], ..., x[{}].'.format(0, n-1))
+    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
     if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
         ObjVal = solver.Objective().Value()
         print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
         print('Variables values:')
         if(PRINT_ZERO_VARS):
-            for j in range(n):
+            for j in var_range:
                 print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
         else:
-            for j in range(n):
+            for j in var_range:
                 if(x[j].solution_value() != 0):
                     print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
     else:
