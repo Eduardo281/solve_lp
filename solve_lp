@@ -14,6 +14,7 @@ def main():
     DEFAULT_SOLVING_TIME = 30
     DEFAULT_DIGITS_ON_SOLUTION = 5
     DEFAULT_NUM_THREADS = 1
+    DEFAULT_MIP_GAP = 10**(-5)
 
     # Building the argument parser:
     parser = argparse.ArgumentParser(prog='solve_lp', 
@@ -29,6 +30,8 @@ def main():
         default=None, help= 'Path to the data file to be used')
     parser.add_argument('-t', '--time', nargs = 1, metavar = "TOTAL_SOLVING_TIME", type = int,
         default=None, help = "Total allowed time for the solver to work (in seconds).")
+    parser.add_argument('-g', '--gap', nargs = 1, metavar = "TOTAL_SOLVING_TIME", type = float,
+        default=None, help = "Relative MIP GAP value to be considered.")
     parser.add_argument('-s', '--solver', nargs = 1, metavar = "SOLVER_NAME", type = str,
         default=None, help = "Which solver to use in the solution procedure. Remember that not all solvers can solve Integer/Mixed Integer problems!")
     parser.add_argument('-d', '--digits', nargs = 1, metavar = "DIGITS_ON_SOLUTION", type = int,
@@ -121,6 +124,11 @@ def main():
         NUM_THREADS = args.threads[0]
     else:
         NUM_THREADS = DEFAULT_NUM_THREADS
+
+    if(args.gap):
+        RELATIVE_MIP_GAP_VALUE = args.gap[0]
+    else:
+        RELATIVE_MIP_GAP_VALUE = DEFAULT_MIP_GAP
 
     if(VERBOSE_PRINT):
         print('Solve_LP started!')
@@ -375,7 +383,12 @@ def main():
     if(PRINT_SOLUTION_LOG):
         solver.EnableOutput()
     solver.SetNumThreads(NUM_THREADS)
-    status = solver.Solve()
+    if(RELATIVE_MIP_GAP_VALUE > 0):
+        solverParams = pywraplp.MPSolverParameters()
+        solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, RELATIVE_MIP_GAP_VALUE)
+        status = solver.Solve(solverParams)
+    else:
+        status = solver.Solve()
 
     if(VERBOSE_PRINT):
         print('The solution procedure is finished!')
