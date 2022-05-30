@@ -43,7 +43,9 @@ RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
             x[j] = solver.IntVar(lb_inputs[j-1], ub_inputs[j-1], 'x[{}]'.format(j))
 
     # Objective Function
-    if(obj_type == '*EMPTY*' or obj_type == 'min'):
+    if(obj_type == '*EMPTY*'):
+        obj_type = 'min'
+    if(obj_type == 'min'):
         obj = solver.Minimize(sum(c[j] * x[j] for j in var_range))
     elif(obj_type == 'max'):
         obj = solver.Maximize(sum(c[j] * x[j] for j in var_range))
