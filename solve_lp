@@ -1,221 +1,507 @@
 #!/usr/bin/python3
 
-# CLI ideas:
-# -f --file: file name (REQUIRED)
-# -t --time: solving time limit (OPTIONAL)
-# -l --log: print solver solution log (OPTIONAL)
-# -s --solver: which solver to be used (OPTIONAL)
-# -z --zeros: omit zero values on solutions (OPTIONAL)
-# -d --digits: number of digits to show on solution and objective (OPTIONAL)
-#
-# -h --help: show package help
-
 from ortools.linear_solver import pywraplp
 import numpy as np
 import re
+import sys
+import json
 
-# Setting up the solver configs:
-TOTAL_SOLVING_TIME = 30
-PRINT_SOLUTION_LOG = False
-NUM_THREADS = 1
-DIGITS_ON_SOLUTION = 5
-SOLVER_NAME = 'SCIP'
+import argparse
 
-file_name = 'bin_knap_ex_1'
-file_name = 'solve_lp_ex_mat_2'
+def ortools_solve(A, b, c, m, n, var_range, row_range, leq_constraints, geq_constraints, var_type, obj_type, 
+ub_inputs, lb_inputs, SOLVER_NAME, TOTAL_SOLVING_TIME, NUM_THREADS, PRINT_ZERO_VARS, DIGITS_ON_SOLUTION, 
+RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
+    # Create the solver object and the infinity value:
+    solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
+    infinity = solver.infinity()
 
-c = list()
-b = list()
-A = list()
-min_obj = True
-present_A_line = 0
-scanning_A_matrix = False
-leq_constraints = '*EMPTY*'
-bin_vars = '*EMPTY*'
-int_vars = '*EMPTY*'
-var_type = dict()
-with open (file_name) as file:
-    for raw_line in file:
-        line = raw_line.strip()
-
-        if(scanning_A_matrix):
-            present_A_line += 1
-            if(re.search('[+-] ', line)):
-                raise RuntimeError('Isolated + or - signal find while reading line {} of A matrix!'.format(present_A_line))
-            A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
-            if(line[-1] == ';'):
-                continue
-            elif(line[-1] == ']'):
-                scanning_A_matrix = False
-            else:
-                raise RuntimeError('Did not find ; at the of line {} of A matrix'.format(present_A_line))
-
-        if(re.search('^b[ ]*=[ ]*\[', line)):
-            if(re.search('[+-] ', line)):
-                raise RuntimeError('Isolated + or - signal find while reading b vector!')
-            b = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
-        if(re.search('^c[ ]*=[ ]*\[', line)):
-            if(re.search('[+-] ', line)):
-                raise RuntimeError('Isolated + or - signal find while reading c vector!')
-            c = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
-        if(re.search('^A[ ]*=[ ]*\[', line)):
-            present_A_line = 1
-            if(re.search('[+-] ', line)):
-                raise RuntimeError('Isolated + or - signal find while reading the 1st line of A matrix!')
-            A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
-            if(line[-1] == ']'):
-                scanning_A_matrix = False
-            else:
-                scanning_A_matrix = True
-
-        if(re.search('^leq[ ]*=[ ]*', line)):
-            if(line[-1] == '*'):
-                leq_constraints = '*'
-                continue
-            leq_constraints = int((re.search('[\d]+', line).group(0)))
-
-        if(re.search('^min[ ]*=[ ]*', line)):
-            if(re.search('False$', line)):
-                min_obj = False
-            else:
-                min_obj = True
-
-        if(re.search('^bin[ ]*=[ ]*', line)):
-            if(line[-1] == '*'):
-                bin_vars = '*'
-                continue
-            bin_vars = list()
-            aux_bin_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
-            aux_bin_list = aux_bin_list.strip().split(',')
-            for entry in aux_bin_list:
-                if('-' in entry):
-                    val1, val2 = entry.split('-')
-                    val1 = int(val1.strip())
-                    val2 = int(val2.strip())
-                    bin_vars.extend(list(range(val1, val2+1)))
-                else:
-                    bin_vars.append(int(entry.strip()))
-            continue
-
-        if(re.search('^int[ ]*=[ ]*', line)):
-            if(line[-1] == '*'):
-                int_vars = '*'
-                continue
-            int_vars = list()
-            aux_int_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
-            aux_int_list = aux_int_list.strip().split(',')
-            for entry in aux_int_list:
-                if('-' in entry):
-                    val1, val2 = entry.split('-')
-                    val1 = int(val1.strip())
-                    val2 = int(val2.strip())
-                    int_vars.extend(list(range(val1, val2+1)))
-                else:
-                    int_vars.append(int(entry.strip()))
-            continue
-
-print('b:')
-print(b)
-b = np.array(b)
-print()
-print('c:')
-c = np.array(c)
-print(c)
-print()
-A = np.array(A)
-print('A:')
-print(A)
-print()
-print('leq:')
-print(leq_constraints)
-print()
-print('bin:')
-print(bin_vars)
-print()
-print('int:')
-print(int_vars)
-print()
-
-if(len(b) != A.shape[0]):
-    raise RuntimeError('Shapes of b and A are incompatible!')
-
-if(len(c) != A.shape[1]):
-    raise RuntimeError('Shapes of c and A are incompatible!')
-
-# Creating the optimization model and the variables:
-solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
-infinity = solver.infinity()
-x = dict()
-
-m = A.shape[0]
-n = A.shape[1]
-
-var_type = {j: 'real' for j in range(n)}
-
-if(bin_vars != '*EMPTY*'):
-    if(bin_vars == '*'):
-        var_type = {j: 'binary' for j in range(n)}
+    # Processing the upper and lower bounds using the OR-Tools infinity:
+    if(isinstance(ub_inputs, np.ndarray)):
+        if(len(ub_inputs) != n):
+            raise RuntimeError('Shape of ub array is incompatible with problem size!')
+    elif(isinstance(ub_inputs, float)):
+        ub_inputs = np.full(n, ub_inputs)
     else:
-        var_type.update({j: 'binary' for j in bin_vars})
-if(int_vars != '*EMPTY*'):
-    if(int_vars == '*'):
-        var_type = {j: 'int' for j in range(n)}
+        ub_inputs = np.full(n, infinity)
+
+    if(isinstance(lb_inputs, np.ndarray)):
+        if(len(lb_inputs) != n):
+            raise RuntimeError('Shape of lb array is incompatible with problem size!')
+    elif(isinstance(lb_inputs, float)):
+        lb_inputs = np.full(n, lb_inputs)
     else:
-        var_type.update({j: 'int' for j in int_vars})
+        lb_inputs = np.full(n, 0.0)
 
-for j in range(n):
-    if(var_type[j] == 'real'):
-        x[j] = solver.NumVar(0.0, infinity, 'x[{}]'.format(j))
-    elif(var_type[j] == 'binary'):
-        x[j] = solver.BoolVar('x[{}]'.format(j))
-    else:
-        x[j] = solver.IntVar(0, infinity, 'x[{}]'.format(j))
-
-# Objective Function
-if(min_obj):
-    obj = solver.Minimize(
-        sum(c[j] * x[j] for j in range(n))
-    )
-else:
-    obj = solver.Maximize(
-        sum(c[j] * x[j] for j in range(n))
-    )
-
-# Adding the constraints sets:
-cstr = dict()
-if(leq_constraints == '*'):
-    for i in range(m):
-        cstr[i] = solver.Add(
-            sum(A[i, j] * x[j] for j in range(n)) <= b[i]
-        )
-else:
-    for i in range(m):
-        if(i <= leq_constraints-1):
-            cstr[i] = solver.Add(
-                sum(A[i, j] * x[j] for j in range(n)) <= b[i]
-            )
+    # Creating the variables:
+    x = dict()
+    for j in var_range:
+        if(var_type[j] == 'real'):
+            x[j] = solver.NumVar(lb_inputs[j-1], ub_inputs[j-1], 'x[{}]'.format(j))
+        elif(var_type[j] == 'binary'):
+            x[j] = solver.BoolVar('x[{}]'.format(j))
         else:
-            cstr[i] = solver.Add(
-                sum(A[i, j] * x[j] for j in range(n)) == b[i]
-            )
+            x[j] = solver.IntVar(lb_inputs[j-1], ub_inputs[j-1], 'x[{}]'.format(j))
 
-# Solving the problem and printing results:
-if(TOTAL_SOLVING_TIME > 0):
-    solver.set_time_limit(TOTAL_SOLVING_TIME * 1000)
-if(PRINT_SOLUTION_LOG):
-    solver.EnableOutput()
-solver.SetNumThreads(NUM_THREADS)
-status = solver.Solve()
+    # Objective Function
+    if(obj_type == '*EMPTY*'):
+        obj_type = 'min'
+    if(obj_type == 'min'):
+        obj = solver.Minimize(sum(c[j] * x[j] for j in var_range))
+    elif(obj_type == 'max'):
+        obj = solver.Maximize(sum(c[j] * x[j] for j in var_range))
+    else:
+        raise RuntimeError('Problem in the objective function type input!')
 
-print('Variables defined: x[{}], ..., x[{}].'.format(0, n-1))
-if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
-    ObjVal = solver.Objective().Value()
-    print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
-    print('Variables values:')
-    for j in range(n):
-        print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
-else:
-    print('No solution found!')
+    # Adding the constraints sets:
+    cstr = dict()
+    if(leq_constraints == '*'):
+        cstr.update({'leq_{}'.format(i): solver.Add(sum(A[i, j] * x[j] for j in var_range) <= b[i]) for i in row_range})
+    else:
+        cstr.update({'leq_{}'.format(i): solver.Add(sum(A[i, j] * x[j] for j in var_range) <= b[i]) for i in leq_constraints})
 
+    if(geq_constraints == '*'):
+        cstr.update({'geq_{}'.format(i): solver.Add(sum(A[i, j] * x[j] for j in var_range) >= b[i]) for i in row_range})
+    else:
+        cstr.update({'geq_{}'.format(i): solver.Add(sum(A[i, j] * x[j] for j in var_range) >= b[i]) for i in geq_constraints})
 
-print('END OF FILE!')
+    if(leq_constraints != '*' and geq_constraints != '*'):
+        eq_constraints = set(row_range).difference(set(leq_constraints).union(set(geq_constraints)))
+        cstr.update({'eq_{}'.format(i): solver.Add(sum(A[i, j] * x[j] for j in var_range) == b[i]) for i in eq_constraints})
+
+    if(VERBOSE_PRINT):
+        print('The model is ready!')
+        print()
+        print('Starting the solution procedure...')
+
+    # Solving the problem and printing results:
+    if(TOTAL_SOLVING_TIME > 0):
+        solver.set_time_limit(TOTAL_SOLVING_TIME * 1000)
+    if(PRINT_SOLUTION_LOG):
+        solver.EnableOutput()
+    solver.SetNumThreads(NUM_THREADS)
+    if(RELATIVE_MIP_GAP_VALUE > 0):
+        solverParams = pywraplp.MPSolverParameters()
+        solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, RELATIVE_MIP_GAP_VALUE)
+        status = solver.Solve(solverParams)
+    else:
+        status = solver.Solve()
+
+    if(VERBOSE_PRINT):
+        print('The solution procedure is finished!')
+        print()
+
+    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+    print('Objective function being considered: {}'.format(obj_type.upper()))
+    if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
+        ObjVal = solver.Objective().Value()
+        print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
+        if(status == solver.FEASIBLE):
+            print('The solution found is FEASIBLE!')
+        else:
+            print('The solution found is OPTIMAL!')
+        print('Variables values:')
+        if(PRINT_ZERO_VARS):
+            for j in var_range:
+                print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+        else:
+            for j in var_range:
+                if(x[j].solution_value() != 0):
+                    print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+    elif(status == solver.UNBOUNDED):
+        print('The problem is unbounded!')
+    else:
+        print('No solution found!')
+
+    return status
+
+def main():
+    # Default solve_lp parameters:
+    ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'SAT', 'SCIP', 'XPRESS']
+    DEFAULT_SOLVER = 'SCIP'
+    DEFAULT_SOLVING_TIME = 30
+    DEFAULT_DIGITS_ON_SOLUTION = 5
+    DEFAULT_NUM_THREADS = 1
+    DEFAULT_MIP_GAP = 10**(-5)
+
+    # Building the argument parser:
+    parser = argparse.ArgumentParser(prog='solve_lp', 
+        allow_abbrev=False,
+        description = '''Solve_lp is a CLI used to solve linear programming problems in a simple way.''',
+        epilog='''***This is a Python3 script built with educational purposes, and so it is not intended to be used
+        in large production environments.***
+        
+        More informations can be found at https://github.com/Eduardo281/solve_lp.'''
+    )
+
+    parser.add_argument('-f', '--file', nargs=1, metavar="INPUT_FILE_PATH", type=str,
+        default=None, help= 'Path to the data file to be used')
+    parser.add_argument('-t', '--time', nargs = 1, metavar = "TOTAL_SOLVING_TIME", type = int,
+        default=None, help = "Total allowed time for the solver to work (in seconds).")
+    parser.add_argument('-g', '--gap', nargs = 1, metavar = "REL_MIP_GAP_VALUE", type = float,
+        default=None, help = "Relative MIP GAP value to be considered.")
+    parser.add_argument('-s', '--solver', nargs = 1, metavar = "SOLVER_NAME", type = str,
+        default=None, help = "Which solver to use in the solution procedure. Remember that not all solvers can solve Integer/Mixed Integer problems!")
+    parser.add_argument('-d', '--digits', nargs = 1, metavar = "DIGITS_ON_SOLUTION", type = int,
+        default=None, help = "How many digits to be considered in the final solution display.")
+    parser.add_argument('-r', '--threads', nargs = 1, metavar='NUM_THREADS', type=int,
+        default=None, help = 'Number of threads to be used by the solver')
+    parser.add_argument('--help-with-solvers', action='store_true', default=None, 
+    dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
+
+    zeros_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    zeros_meg_parser.add_argument('--zeros', dest='zeros', action='store_true')
+    zeros_meg_parser.add_argument('--no-zeros', dest='zeros', action='store_false')
+    zeros_meg_parser.set_defaults(zeros=False)
+
+    log_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    log_meg_parser.add_argument('--log', dest='log', action='store_true')
+    log_meg_parser.add_argument('--no-log', dest='log', action='store_false')
+    log_meg_parser.set_defaults(log=False)
+
+    verbose_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    verbose_meg_parser.add_argument('--verbose', dest='verbose', action='store_true')
+    verbose_meg_parser.add_argument('--no-verbose', dest='verbose', action='store_false')
+    verbose_meg_parser.set_defaults(verbose=False)
+
+    input_type_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    input_type_meg_parser.add_argument('--matrix-input', dest='input_type', action='store_const', const='matrix')
+    input_type_meg_parser.add_argument('--model-input', dest='input_type', action='store_const', const='model')
+    input_type_meg_parser.add_argument('--json-input', dest='input_type', action='store_const', const='json')
+    input_type_meg_parser.set_defaults(input_type=None)
+
+    args = parser.parse_args()
+
+    if(args.PRINT_HELP_WITH_SOLVERS):
+        print('*****')
+        print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
+        print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
+        print("For more information please refer to the solvers/or-tools documentations.")
+        print()
+        print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
+        print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
+        print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
+        print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+        print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
+        print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
+        print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+        print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
+        print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
+        print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+        print('Where...')
+        print('BP = Binary Programming (only binary variables);')
+        print('IP = Integer Programming (integer and/or binary variables)')
+        print('LP = Linear Programming (only real variables)')
+        print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
+        print()
+        print('General notes:')
+        print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
+        print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
+        print('*****')
+        sys.exit(100)
+
+    if(not args.file):
+        raise RuntimeError('The following argument is required: -f/--file')
+
+    # Setting up the solver configs:
+    INPUT_FILE_PATH = args.file[0]
+
+    if(args.input_type):
+        INPUT_TYPE = args.input_type
+    else:
+        INPUT_TYPE = 'matrix'
+
+    PRINT_ZERO_VARS = args.zeros
+    PRINT_SOLUTION_LOG = args.log
+    VERBOSE_PRINT = args.verbose
+
+    if(args.time):
+        TOTAL_SOLVING_TIME = args.time[0]
+    else:
+        TOTAL_SOLVING_TIME = DEFAULT_SOLVING_TIME
+    
+    if(args.digits):
+        DIGITS_ON_SOLUTION = args.digits[0]
+    else:
+        DIGITS_ON_SOLUTION = DEFAULT_DIGITS_ON_SOLUTION
+
+    if(args.solver):
+        if(args.solver[0].upper() not in ACCEPTED_SOLVERS):
+            print('The solvers available are:')
+            print(ACCEPTED_SOLVERS)
+            print('Input received was: {}'.format(args.solver[0]))
+            raise ValueError('Did not find solver with the specified name!')
+        SOLVER_NAME = args.solver[0]
+    else:
+        SOLVER_NAME = DEFAULT_SOLVER
+
+    if(args.threads):
+        NUM_THREADS = args.threads[0]
+    else:
+        NUM_THREADS = DEFAULT_NUM_THREADS
+
+    if(args.gap):
+        RELATIVE_MIP_GAP_VALUE = args.gap[0]
+    else:
+        RELATIVE_MIP_GAP_VALUE = DEFAULT_MIP_GAP
+
+    if(VERBOSE_PRINT):
+        print('Solve_LP started!')
+        print()
+        print('Reading input data file...')
+
+    # Reading the data file and processing the inputs:
+    leq_constraints = '*EMPTY*'
+    geq_constraints = '*EMPTY*'
+    bin_vars = '*EMPTY*'
+    int_vars = '*EMPTY*'
+    obj_type = '*EMPTY*'
+    ub_inputs = '*EMPTY*'
+    lb_inputs = '*EMPTY*'
+
+    if(INPUT_TYPE == 'json'):
+        with open(INPUT_FILE_PATH) as file:
+            data_json = json.load(file)
+        c = data_json['c']
+        b = data_json['b']
+        A = data_json['A']
+        if('obj' in data_json.keys()):
+            obj_type = data_json['obj']
+        if('leq' in data_json.keys()):
+            if(data_json['leq'] == [-1]):
+                leq_constraints = '*'
+            else:
+                leq_constraints = data_json['leq']
+        if('geq' in data_json.keys()):
+            if(data_json['geq'] == [-1]):
+                geq_constraints = '*'
+            else:
+                geq_constraints = data_json['geq']
+        if('bin' in data_json.keys()):
+            if(data_json['bin'] == [-1]):
+                bin_vars = '*'
+            else:
+                bin_vars = data_json['bin']
+        if('int' in data_json.keys()):
+            if(data_json['int'] == [-1]):
+                int_vars = '*'
+            else:
+                int_vars = data_json['int']
+        if('ub' in data_json.keys()):
+            ub_inputs = data_json['ub']
+        if('lb' in data_json.keys()):
+            lb_inputs = data_json['lb']
+    elif(INPUT_TYPE == 'matrix'):
+        c = list()
+        b = list()
+        A = list()
+        present_A_line = 0
+        scanning_A_matrix = False
+        var_type = dict()
+        with open(INPUT_FILE_PATH) as file:
+            for raw_line in file:
+                line = raw_line.strip()
+
+                if(scanning_A_matrix):
+                    present_A_line += 1
+                    if(re.search('[+-] ', line)):
+                        raise RuntimeError('Isolated + or - signal find while reading line {} of A matrix!'.format(present_A_line))
+                    A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
+                    if(line[-1] == ';'):
+                        continue
+                    elif(line[-1] == ']'):
+                        scanning_A_matrix = False
+                    else:
+                        raise RuntimeError('Did not find ; at the of line {} of A matrix'.format(present_A_line))
+
+                if(re.search('^b[ ]*=[ ]*\[', line)):
+                    if(re.search('[+-] ', line)):
+                        raise RuntimeError('Isolated + or - signal find while reading b vector!')
+                    b = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
+                if(re.search('^c[ ]*=[ ]*\[', line)):
+                    if(re.search('[+-] ', line)):
+                        raise RuntimeError('Isolated + or - signal find while reading c vector!')
+                    c = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
+                if(re.search('^A[ ]*=[ ]*\[', line)):
+                    present_A_line = 1
+                    if(re.search('[+-] ', line)):
+                        raise RuntimeError('Isolated + or - signal find while reading the 1st line of A matrix!')
+                    A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
+                    if(line[-1] == ']'):
+                        scanning_A_matrix = False
+                    else:
+                        scanning_A_matrix = True
+
+                if(re.search('^leq[ ]*=[ ]*', line)):
+                    if(line[-1] == '*'):
+                        leq_constraints = '*'
+                        continue
+                    leq_constraints = list()
+                    aux_leq_cstr = re.search('=([ 0-9\-\,]+)$', line).group(1)
+                    aux_leq_cstr = aux_leq_cstr.strip().split(',')
+                    for entry in aux_leq_cstr:
+                        if('-' in entry):
+                            val1, val2 = entry.split('-')
+                            val1 = int(val1.strip())
+                            val2 = int(val2.strip())
+                            leq_constraints.extend(list(range(val1, val2+1)))
+                        else:
+                            leq_constraints.append(int(entry.strip()))
+                    continue
+
+                if(re.search('^geq[ ]*=[ ]*', line)):
+                    if(line[-1] == '*'):
+                        geq_constraints = '*'
+                        continue
+                    geq_constraints = list()
+                    aux_geq_cstr = re.search('=([ 0-9\-\,]+)$', line).group(1)
+                    aux_geq_cstr = aux_geq_cstr.strip().split(',')
+                    for entry in aux_geq_cstr:
+                        if('-' in entry):
+                            val1, val2 = entry.split('-')
+                            val1 = int(val1.strip())
+                            val2 = int(val2.strip())
+                            geq_constraints.extend(list(range(val1, val2+1)))
+                        else:
+                            geq_constraints.append(int(entry.strip()))
+                    continue
+
+                if(re.search('^obj[ ]*=[ ]*', line)):
+                    aux_obj_type = re.search('=(.*)$', line).group(1)
+                    obj_type = aux_obj_type.strip().lower()
+                    if((obj_type != 'min') and (obj_type != 'max')):
+                        raise RuntimeError('Problem with the objective function specified!')
+
+                if(re.search('^ub[ ]*=[ ]*', line)):
+                    try:
+                        ub_inputs = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
+                    except:
+                        ub_inputs = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
+                        ub_inputs = ub_inputs.strip().split(',')
+                        ub_inputs = np.array(ub_inputs, dtype=float)
+
+                if(re.search('^lb[ ]*=[ ]*', line)):
+                    try:
+                        lb_inputs = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
+                    except:
+                        lb_inputs = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
+                        lb_inputs = lb_inputs.strip().split(',')
+                        lb_inputs = np.array(lb_inputs, dtype=float)
+
+                if(re.search('^bin[ ]*=[ ]*', line)):
+                    if(line[-1] == '*'):
+                        bin_vars = '*'
+                        continue
+                    bin_vars = list()
+                    aux_bin_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
+                    aux_bin_list = aux_bin_list.strip().split(',')
+                    for entry in aux_bin_list:
+                        if('-' in entry):
+                            val1, val2 = entry.split('-')
+                            val1 = int(val1.strip())
+                            val2 = int(val2.strip())
+                            bin_vars.extend(list(range(val1, val2+1)))
+                        else:
+                            bin_vars.append(int(entry.strip()))
+                    continue
+
+                if(re.search('^int[ ]*=[ ]*', line)):
+                    if(line[-1] == '*'):
+                        int_vars = '*'
+                        continue
+                    int_vars = list()
+                    aux_int_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
+                    aux_int_list = aux_int_list.strip().split(',')
+                    for entry in aux_int_list:
+                        if('-' in entry):
+                            val1, val2 = entry.split('-')
+                            val1 = int(val1.strip())
+                            val2 = int(val2.strip())
+                            int_vars.extend(list(range(val1, val2+1)))
+                        else:
+                            int_vars.append(int(entry.strip()))
+                    continue
+
+    if(VERBOSE_PRINT):
+        print('Data file was read!')
+        print()
+        print('Starting to instantiate the inputed solver ({})...'.format(SOLVER_NAME.upper()))
+        print()
+
+    # Creating the optimization model and the variables:
+    b = np.array(b)
+    print('b:')
+    print(b)
+    print()
+    c = np.array(c)
+    print('c:')
+    print(c)
+    print()
+    A = np.array(A)
+    print('A:')
+    print(A)
+    print()
+    print('leq:')
+    print(leq_constraints)
+    print()
+    print('bin:')
+    print(bin_vars)
+    print()
+    print('int:')
+    print(int_vars)
+    print()
+    print('obj_type:')
+    print(obj_type)
+    print()
+    print('ub_inputs:')
+    print(ub_inputs)
+    print()
+    print('lb_inputs:')
+    print(lb_inputs)
+    print()
+
+    if(VERBOSE_PRINT):
+        print('Validating data and starting to build the model...')
+
+    if(len(b) != A.shape[0]):
+        raise RuntimeError('Shapes of b and A are incompatible!')
+
+    if(len(c) != A.shape[1]):
+        raise RuntimeError('Shapes of c and A are incompatible!')
+
+    m = A.shape[0]
+    n = A.shape[1]
+
+    A = {((i+1), (j+1)) : A[i][j] for i in range(len(A)) for j in range(len(A[i]))}
+    b = {(j+1) : b[j] for j in range(len(b))}
+    c = {(j+1) : c[j] for j in range(len(c))}
+
+    var_range = range(1, n+1)
+    row_range = range(1, m+1)
+
+    var_type = {j: 'real' for j in var_range}
+
+    if(bin_vars != '*EMPTY*'):
+        if(bin_vars == '*'):
+            var_type = {j: 'binary' for j in var_range}
+        else:
+            var_type.update({j: 'binary' for j in bin_vars})
+    if(int_vars != '*EMPTY*'):
+        if(int_vars == '*'):
+            var_type = {j: 'int' for j in var_range}
+        else:
+            var_type.update({j: 'int' for j in int_vars})
+
+    if(leq_constraints == '*EMPTY*'):
+        leq_constraints = []
+    if(geq_constraints == '*EMPTY*'):
+        geq_constraints = []
+
+    # Solving the model using Google's OR-Tools
+    status = ortools_solve(A, b, c, m, n, var_range, row_range, leq_constraints, geq_constraints, var_type, 
+    obj_type, ub_inputs, lb_inputs, SOLVER_NAME, TOTAL_SOLVING_TIME, NUM_THREADS, PRINT_ZERO_VARS, 
+    DIGITS_ON_SOLUTION, RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG)
+
+    print('END OF FILE!')
+
+if __name__ == "__main__":
+    main()
