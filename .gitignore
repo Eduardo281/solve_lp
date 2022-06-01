@@ -37,6 +37,15 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+# LaTex compiling files
+*.synctex*
+*.toc
+*.out
+*.aux
+*.fdb_latexmk
+*.fls
+*.listing
+
 # Unit test / coverage reports
 htmlcov/
 .tox/
