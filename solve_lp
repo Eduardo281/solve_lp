@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 
 from ortools.linear_solver import pywraplp
+import mip
+import gurobipy as gp
+
 import numpy as np
 import re
 import sys
@@ -113,6 +116,300 @@ RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
         print('No solution found!')
 
     return status
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def gurobipy_solve(A, b, c, m, n, var_range, row_range, leq_constraints, geq_constraints, var_type, obj_type, 
+ub_inputs, lb_inputs, SOLVER_NAME, TOTAL_SOLVING_TIME, NUM_THREADS, PRINT_ZERO_VARS, DIGITS_ON_SOLUTION, 
+RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
+    
+    # if(memLimit):
+    #     memLimit = memLimit
+    #     env = gp.Env(empty=True)
+    #     env.setParam("MemLimit", memLimit)
+    #     env.start()
+    #     model = gp.Model(env=env)
+    # else:
+    #     model = gp.Model()
+    model = gp.Model()
+    infinity = float('INF')
+
+    # Processing the upper and lower bounds using the OR-Tools infinity:
+    if(isinstance(ub_inputs, np.ndarray)):
+        if(len(ub_inputs) != n):
+            raise RuntimeError('Shape of ub array is incompatible with problem size!')
+    elif(isinstance(ub_inputs, float)):
+        ub_inputs = np.full(n, ub_inputs)
+    else:
+        ub_inputs = np.full(n, infinity)
+
+    if(isinstance(lb_inputs, np.ndarray)):
+        if(len(lb_inputs) != n):
+            raise RuntimeError('Shape of lb array is incompatible with problem size!')
+    elif(isinstance(lb_inputs, float)):
+        lb_inputs = np.full(n, lb_inputs)
+    else:
+        lb_inputs = np.full(n, 0.0)
+
+    # Creating the variables:
+    x = dict()
+    for j in var_range:
+        if(var_type[j] == 'real'):
+            x[j] = model.addVar(lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+        elif(var_type[j] == 'binary'):
+            x[j] = model.addVar(vtype=gp.GRB.BINARY, name='x[{}]'.format(j))
+        else:
+            x[j] = model.addVar(vtype=gp.GRB.INTEGER, lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+
+    # Objective Function
+    if(obj_type == '*EMPTY*'):
+        obj_type = 'min'
+    if(obj_type == 'min'):
+        obj = model.setObjective(gp.quicksum(c[j] * x[j] for j in var_range), sense=gp.GRB.MINIMIZE)
+    elif(obj_type == 'max'):
+        obj = model.setObjective(gp.quicksum(c[j] * x[j] for j in var_range), sense=gp.GRB.MAXIMIZE)
+    else:
+        raise RuntimeError('Problem in the objective function type input!')
+
+    # Adding the constraints sets:
+    cstr = dict()
+    if(leq_constraints == '*'):
+        cstr.update({'leq_{}'.format(i): model.addConstr(
+            gp.quicksum(A[i, j] * x[j] for j in var_range) <= b[i]) for i in row_range}
+        )
+    else:
+        cstr.update({'leq_{}'.format(i): model.addConstr(
+            gp.quicksum(A[i, j] * x[j] for j in var_range) <= b[i]) for i in leq_constraints}
+        )
+    if(geq_constraints == '*'):
+        cstr.update({'leq_{}'.format(i): model.addConstr(
+            gp.quicksum(A[i, j] * x[j] for j in var_range) >= b[i]) for i in row_range}
+        )
+    else:
+        cstr.update({'leq_{}'.format(i): model.addConstr(
+            gp.quicksum(A[i, j] * x[j] for j in var_range) >= b[i]) for i in geq_constraints}
+        )
+    if(leq_constraints != '*' and geq_constraints != '*'):
+        eq_constraints = set(row_range).difference(set(leq_constraints).union(set(geq_constraints)))
+        cstr.update({'leq_{}'.format(i): model.addConstr(
+            gp.quicksum(A[i, j] * x[j] for j in var_range) == b[i]) for i in eq_constraints}
+        )
+
+    if(VERBOSE_PRINT):
+        print('The model is ready!')
+        print()
+        print('Starting the solution procedure...')
+
+    # Solving the problem and printing results:
+    if(TOTAL_SOLVING_TIME > 0):
+        model.setParam('TimeLimit', TOTAL_SOLVING_TIME)
+    if(PRINT_SOLUTION_LOG):
+        model.Params.LogToConsole = 1
+    else:
+        model.Params.LogToConsole = 0
+
+    # solver.SetNumThreads(NUM_THREADS)
+    # if(RELATIVE_MIP_GAP_VALUE > 0):
+    #     solverParams = pywraplp.MPSolverParameters()
+    #     solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, RELATIVE_MIP_GAP_VALUE)
+    #     status = solver.Solve(solverParams)
+    # else:
+    #     status = solver.Solve()
+
+    # if(VERBOSE_PRINT):
+    #     print('The solution procedure is finished!')
+    #     print()
+
+    # print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+    # print('Objective function being considered: {}'.format(obj_type.upper()))
+    # if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
+    #     ObjVal = solver.Objective().Value()
+    #     print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
+    #     if(status == solver.FEASIBLE):
+    #         print('The solution found is FEASIBLE!')
+    #     else:
+    #         print('The solution found is OPTIMAL!')
+    #     print('Variables values:')
+    #     if(PRINT_ZERO_VARS):
+    #         for j in var_range:
+    #             print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+    #     else:
+    #         for j in var_range:
+    #             if(x[j].solution_value() != 0):
+    #                 print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+    # elif(status == solver.UNBOUNDED):
+    #     print('The problem is unbounded!')
+    # else:
+    #     print('No solution found!')
+
+    # return status
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def python_mip_solve(A, b, c, m, n, var_range, row_range, leq_constraints, geq_constraints, var_type, obj_type, 
+ub_inputs, lb_inputs, SOLVER_NAME, TOTAL_SOLVING_TIME, NUM_THREADS, PRINT_ZERO_VARS, DIGITS_ON_SOLUTION, 
+RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
+        
+    # Processing objective type:
+    if(obj_type == '*EMPTY*'):
+        obj_type = 'min'
+    if(obj_type == 'min'):
+        model_sense = mip.MINIMIZE
+    elif(obj_type == 'max'):
+        model_sense = mip.MAXIMIZE
+    else:
+        raise RuntimeError('Problem in the objective function type input!')
+
+    # Setting up the selected optimization solver:
+    if(SOLVER_NAME=="cbc"):
+        model = mip.Model(solver_name=mip.CBC, sense=model_sense)
+    elif(SOLVER_NAME=="gurobi"):
+        model = mip.Model(solver_name=mip.GUROBI, sense=model_sense)
+    else:
+        raise NameError('Invalid Solver name!')
+
+    infinity = mip.INF
+
+    # Processing the upper and lower bounds using the OR-Tools infinity:
+    if(isinstance(ub_inputs, np.ndarray)):
+        if(len(ub_inputs) != n):
+            raise RuntimeError('Shape of ub array is incompatible with problem size!')
+    elif(isinstance(ub_inputs, float)):
+        ub_inputs = np.full(n, ub_inputs)
+    else:
+        ub_inputs = np.full(n, infinity)
+
+    if(isinstance(lb_inputs, np.ndarray)):
+        if(len(lb_inputs) != n):
+            raise RuntimeError('Shape of lb array is incompatible with problem size!')
+    elif(isinstance(lb_inputs, float)):
+        lb_inputs = np.full(n, lb_inputs)
+    else:
+        lb_inputs = np.full(n, 0.0)
+
+    # Creating the variables:
+    x = dict()
+    for j in var_range:
+        if(var_type[j] == 'real'):
+            x[j] = model.add_var(lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+        elif(var_type[j] == 'binary'):
+            x[j] = model.add_var(var_type=mip.BINARY, name='x[{}]'.format(j))
+        else:
+            x[j] = model.add_var(var_type=mip.INTEGER, lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+
+    # Objective Function
+    model.objective = mip.xsum(c[j] * x[j] for j in var_range)
+
+    # Adding the constraints sets:
+    cstr = dict()
+    if(leq_constraints == '*'):
+        for i in row_range:
+            model += mip.xsum(A[i, j] * x[j] for j in var_range) <= b[i]
+    else:
+        for i in leq_constraints:
+            model += mip.xsum(A[i, j] * x[j] for j in var_range) <= b[i]
+
+    if(geq_constraints == '*'):
+        for i in row_range:
+            model += mip.xsum(A[i, j] * x[j] for j in var_range) >= b[i]
+    else:
+        for i in geq_constraints:
+            model += mip.xsum(A[i, j] * x[j] for j in var_range) >= b[i]
+
+    if(leq_constraints != '*' and geq_constraints != '*'):
+        eq_constraints = set(row_range).difference(set(leq_constraints).union(set(geq_constraints)))
+        for i in eq_constraints:
+            model += mip.xsum(A[i, j] * x[j] for j in var_range) == b[i]
+
+    if(VERBOSE_PRINT):
+        print('The model is ready!')
+        print()
+        print('Starting the solution procedure...')
+
+    # Solving the problem and printing results:
+    if(TOTAL_SOLVING_TIME > 0):
+        model.max_seconds = TOTAL_SOLVING_TIME
+    if(PRINT_SOLUTION_LOG):
+        model.verbose = 1
+    else:
+        model.verbose = 0
+    # if(check_clique_merge):
+    #     model.clique_merge()
+    model.threads = NUM_THREADS
+    if(RELATIVE_MIP_GAP_VALUE > 0):
+        model.gap = RELATIVE_MIP_GAP_VALUE
+        status = ""
+        model.optimize()
+    else:
+        status = ""
+        model.optimize()
+
+    # if(VERBOSE_PRINT):
+    #     print('The solution procedure is finished!')
+    #     print()
+
+    # print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+    # print('Objective function being considered: {}'.format(obj_type.upper()))
+    # if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
+    #     ObjVal = solver.Objective().Value()
+    #     print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
+    #     if(status == solver.FEASIBLE):
+    #         print('The solution found is FEASIBLE!')
+    #     else:
+    #         print('The solution found is OPTIMAL!')
+    #     print('Variables values:')
+    #     if(PRINT_ZERO_VARS):
+    #         for j in var_range:
+    #             print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+    #     else:
+    #         for j in var_range:
+    #             if(x[j].solution_value() != 0):
+    #                 print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+    # elif(status == solver.UNBOUNDED):
+    #     print('The problem is unbounded!')
+    # else:
+    #     print('No solution found!')
+
+    # return status
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def main():
     # Default solve_lp parameters:
