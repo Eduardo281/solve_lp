@@ -95,7 +95,7 @@ def solve_OR_Tools_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP_G
 
     return status
 
-def print_OR_Tools_solution(n, var_range, x, obj_type, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS, solver, status):
+def print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
     print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
     print('Objective function being considered: {}'.format(obj_type.upper()))
     if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
@@ -119,17 +119,14 @@ def print_OR_Tools_solution(n, var_range, x, obj_type, DIGITS_ON_SOLUTION, PRINT
         print('No solution found!')
 
 def build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
-geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, VERBOSE_PRINT):
-    
-    # if(memLimit):
-    #     memLimit = memLimit
-    #     env = gp.Env(empty=True)
-    #     env.setParam("MemLimit", memLimit)
-    #     env.start()
-    #     model = gp.Model(env=env)
-    # else:
-    #     model = gp.Model()
-    model = gp.Model()
+geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, MEMORY_LIMIT):
+    if(MEMORY_LIMIT):
+        env = gp.Env(empty=True)
+        env.setParam("MemLimit", MEMORY_LIMIT)
+        env.start()
+        solver = gp.Model(env=env)
+    else:
+        solver = gp.Model()
     infinity = float('INF')
 
     # Processing the upper and lower bounds using the OR-Tools infinity:
@@ -153,94 +150,84 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, VERBOSE_PRINT):
     x = dict()
     for j in var_range:
         if(var_type[j] == 'real'):
-            x[j] = model.addVar(lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+            x[j] = solver.addVar(lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
         elif(var_type[j] == 'binary'):
-            x[j] = model.addVar(vtype=gp.GRB.BINARY, name='x[{}]'.format(j))
+            x[j] = solver.addVar(vtype=gp.GRB.BINARY, name='x[{}]'.format(j))
         else:
-            x[j] = model.addVar(vtype=gp.GRB.INTEGER, lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+            x[j] = solver.addVar(vtype=gp.GRB.INTEGER, lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
 
     # Objective Function
     if(obj_type == '*EMPTY*'):
         obj_type = 'min'
     if(obj_type == 'min'):
-        obj = model.setObjective(gp.quicksum(c[j] * x[j] for j in var_range), sense=gp.GRB.MINIMIZE)
+        obj = solver.setObjective(gp.quicksum(c[j] * x[j] for j in var_range), sense=gp.GRB.MINIMIZE)
     elif(obj_type == 'max'):
-        obj = model.setObjective(gp.quicksum(c[j] * x[j] for j in var_range), sense=gp.GRB.MAXIMIZE)
+        obj = solver.setObjective(gp.quicksum(c[j] * x[j] for j in var_range), sense=gp.GRB.MAXIMIZE)
     else:
         raise RuntimeError('Problem in the objective function type input!')
 
     # Adding the constraints sets:
     cstr = dict()
     if(leq_constraints == '*'):
-        cstr.update({'leq_{}'.format(i): model.addConstr(
+        cstr.update({'leq_{}'.format(i): solver.addConstr(
             gp.quicksum(A[i, j] * x[j] for j in var_range) <= b[i]) for i in row_range}
         )
     else:
-        cstr.update({'leq_{}'.format(i): model.addConstr(
+        cstr.update({'leq_{}'.format(i): solver.addConstr(
             gp.quicksum(A[i, j] * x[j] for j in var_range) <= b[i]) for i in leq_constraints}
         )
     if(geq_constraints == '*'):
-        cstr.update({'leq_{}'.format(i): model.addConstr(
+        cstr.update({'leq_{}'.format(i): solver.addConstr(
             gp.quicksum(A[i, j] * x[j] for j in var_range) >= b[i]) for i in row_range}
         )
     else:
-        cstr.update({'leq_{}'.format(i): model.addConstr(
+        cstr.update({'leq_{}'.format(i): solver.addConstr(
             gp.quicksum(A[i, j] * x[j] for j in var_range) >= b[i]) for i in geq_constraints}
         )
     if(leq_constraints != '*' and geq_constraints != '*'):
         eq_constraints = set(row_range).difference(set(leq_constraints).union(set(geq_constraints)))
-        cstr.update({'leq_{}'.format(i): model.addConstr(
+        cstr.update({'leq_{}'.format(i): solver.addConstr(
             gp.quicksum(A[i, j] * x[j] for j in var_range) == b[i]) for i in eq_constraints}
         )
 
-def solve_Gurobipy_model(A, b, c, m, n, var_range, row_range, leq_constraints, geq_constraints, var_type, obj_type, 
-ub_inputs, lb_inputs, SOLVER_NAME, TOTAL_SOLVING_TIME, NUM_THREADS, PRINT_ZERO_VARS, DIGITS_ON_SOLUTION, 
-RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
-    if(VERBOSE_PRINT):
-        print('The model is ready!')
-        print()
-        print('Starting the solution procedure...')
+    return solver, x, obj, cstr
 
+def solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, 
+PRINT_SOLUTION_LOG, NODE_FILE_SIZE):
     # Solving the problem and printing results:
     if(TOTAL_SOLVING_TIME > 0):
-        model.setParam('TimeLimit', TOTAL_SOLVING_TIME)
+        solver.setParam('TimeLimit', TOTAL_SOLVING_TIME)
     if(PRINT_SOLUTION_LOG):
-        model.Params.LogToConsole = 1
+        solver.setParam('LogToConsole', 1)
     else:
-        model.Params.LogToConsole = 0
-
-    ###### TODO ###################
-    ###############################
-    
-    solver.SetNumThreads(NUM_THREADS)
+        solver.setParam('LogToConsole', 0)
+    solver.setParam('Threads', NUM_THREADS)
     if(RELATIVE_MIP_GAP_VALUE > 0):
-        solverParams = pywraplp.MPSolverParameters()
-        solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, RELATIVE_MIP_GAP_VALUE)
-        status = solver.Solve(solverParams)
+        solver.setParam('MIPGap', RELATIVE_MIP_GAP_VALUE)
+        status = solver.optimize()
     else:
-        status = solver.Solve()
+        status = solver.optimize()
 
-    if(VERBOSE_PRINT):
-        print('The solution procedure is finished!')
-        print()
+    return status
 
+def print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
     print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
     print('Objective function being considered: {}'.format(obj_type.upper()))
-    if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
-        ObjVal = solver.Objective().Value()
+    if((status == gp.GRB.SUBOPTIMAL) or (status == gp.GRB.OPTIMAL)):
+        ObjVal = solver.ObjVal()
         print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
-        if(status == solver.FEASIBLE):
+        if(status == gp.GRB.SUBOPTIMAL):
             print('The solution found is FEASIBLE!')
         else:
             print('The solution found is OPTIMAL!')
         print('Variables values:')
         if(PRINT_ZERO_VARS):
             for j in var_range:
-                print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+                print('x[{}] = {}'.format(j, round(x[j].X, DIGITS_ON_SOLUTION)))
         else:
             for j in var_range:
-                if(x[j].solution_value() != 0):
-                    print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+                if(x[j].X != 0):
+                    print('x[{}] = {}'.format(j, round(x[j].X, DIGITS_ON_SOLUTION)))
     elif(status == solver.UNBOUNDED):
         print('The problem is unbounded!')
     else:
@@ -248,22 +235,8 @@ RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
 
     return status
 
-def print_Gurobipy_solution():
-    pass
-
-def build_Python_MIP_model():
-    pass
-
-def solve_Python_MIP_model():
-    pass
-
-def print_Python_MIP_solution():
-    pass
-
-def python_mip_solve(A, b, c, m, n, var_range, row_range, leq_constraints, geq_constraints, var_type, obj_type, 
-ub_inputs, lb_inputs, SOLVER_NAME, TOTAL_SOLVING_TIME, NUM_THREADS, PRINT_ZERO_VARS, DIGITS_ON_SOLUTION, 
-RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
-        
+def build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
+geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME):
     # Processing objective type:
     if(obj_type == '*EMPTY*'):
         obj_type = 'min'
@@ -276,9 +249,9 @@ RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
 
     # Setting up the selected optimization solver:
     if(SOLVER_NAME=="cbc"):
-        model = mip.Model(solver_name=mip.CBC, sense=model_sense)
+        solver = mip.Model(solver_name=mip.CBC, sense=model_sense)
     elif(SOLVER_NAME=="gurobi"):
-        model = mip.Model(solver_name=mip.GUROBI, sense=model_sense)
+        solver = mip.Model(solver_name=mip.GUROBI, sense=model_sense)
     else:
         raise NameError('Invalid Solver name!')
 
@@ -305,66 +278,63 @@ RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG):
     x = dict()
     for j in var_range:
         if(var_type[j] == 'real'):
-            x[j] = model.add_var(lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+            x[j] = solver.add_var(lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
         elif(var_type[j] == 'binary'):
-            x[j] = model.add_var(var_type=mip.BINARY, name='x[{}]'.format(j))
+            x[j] = solver.add_var(var_type=mip.BINARY, name='x[{}]'.format(j))
         else:
-            x[j] = model.add_var(var_type=mip.INTEGER, lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
+            x[j] = solver.add_var(var_type=mip.INTEGER, lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
 
     # Objective Function
-    model.objective = mip.xsum(c[j] * x[j] for j in var_range)
+    solver.objective = mip.xsum(c[j] * x[j] for j in var_range)
+    obj = solver.objective
 
     # Adding the constraints sets:
     cstr = dict()
     if(leq_constraints == '*'):
         for i in row_range:
-            model += mip.xsum(A[i, j] * x[j] for j in var_range) <= b[i]
+            solver += mip.xsum(A[i, j] * x[j] for j in var_range) <= b[i]
     else:
         for i in leq_constraints:
-            model += mip.xsum(A[i, j] * x[j] for j in var_range) <= b[i]
+            solver += mip.xsum(A[i, j] * x[j] for j in var_range) <= b[i]
 
     if(geq_constraints == '*'):
         for i in row_range:
-            model += mip.xsum(A[i, j] * x[j] for j in var_range) >= b[i]
+            solver += mip.xsum(A[i, j] * x[j] for j in var_range) >= b[i]
     else:
         for i in geq_constraints:
-            model += mip.xsum(A[i, j] * x[j] for j in var_range) >= b[i]
+            solver += mip.xsum(A[i, j] * x[j] for j in var_range) >= b[i]
 
     if(leq_constraints != '*' and geq_constraints != '*'):
         eq_constraints = set(row_range).difference(set(leq_constraints).union(set(geq_constraints)))
         for i in eq_constraints:
-            model += mip.xsum(A[i, j] * x[j] for j in var_range) == b[i]
+            solver += mip.xsum(A[i, j] * x[j] for j in var_range) == b[i]
 
-    if(VERBOSE_PRINT):
-        print('The model is ready!')
-        print()
-        print('Starting the solution procedure...')
+    return solver, x, obj, cstr
 
+def solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, CHECK_CLIQUE_MERGE):
     # Solving the problem and printing results:
     if(TOTAL_SOLVING_TIME > 0):
-        model.max_seconds = TOTAL_SOLVING_TIME
+        solver.max_seconds = TOTAL_SOLVING_TIME
     if(PRINT_SOLUTION_LOG):
-        model.verbose = 1
+        solver.verbose = 1
     else:
-        model.verbose = 0
-    # if(check_clique_merge):
-    #     model.clique_merge()
-    model.threads = NUM_THREADS
+        solver.verbose = 0
+    if(CHECK_CLIQUE_MERGE):
+        solver.clique_merge()
+    solver.threads = NUM_THREADS
     if(RELATIVE_MIP_GAP_VALUE > 0):
-        model.gap = RELATIVE_MIP_GAP_VALUE
+        solver.gap = RELATIVE_MIP_GAP_VALUE
         status = ""
-        model.optimize()
+        solver.optimize()
     else:
         status = ""
-        model.optimize()
+        solver.optimize()
 
+    return status
+
+def print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
     ###### TODO ###################
     ###############################
-
-    if(VERBOSE_PRINT):
-        print('The solution procedure is finished!')
-        print()
-
     print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
     print('Objective function being considered: {}'.format(obj_type.upper()))
     if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
@@ -401,7 +371,9 @@ def process_mps_input_data():
 def main():
     # Default solve_lp parameters:
     ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS']
+    ACCEPTED_MODELING_LANGUAGES = ['GUROBIPY', 'OR-TOOLS', 'PYTHON-MIP']
     DEFAULT_SOLVER = 'SCIP'
+    DEFAULT_MODELING_LANGUAGE = 'OR-TOOLS'
     DEFAULT_SOLVING_TIME = 30
     DEFAULT_DIGITS_ON_SOLUTION = 5
     DEFAULT_NUM_THREADS = 1
@@ -429,8 +401,10 @@ def main():
         default=None, help = "How many digits to be considered in the final solution display.")
     parser.add_argument('-r', '--threads', nargs = 1, metavar='NUM_THREADS', type=int,
         default=None, help = 'Number of threads to be used by the solver')
+    parser.add_argument('-m', '--modeling-language', nargs=1, metavar='MODELING_LANGUAGE', type=str,
+        default=None, dest='modeling_language', help = 'Which modeling language to use. Available: GUROBIPY, OR-TOOLS and PYTHON-MIP.')
     parser.add_argument('--help-with-solvers', action='store_true', default=None, 
-    dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
+        dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
 
     zeros_meg_parser = parser.add_mutually_exclusive_group(required=False)
     zeros_meg_parser.add_argument('--zeros', dest='zeros', action='store_true')
@@ -518,6 +492,16 @@ def main():
         SOLVER_NAME = args.solver[0]
     else:
         SOLVER_NAME = DEFAULT_SOLVER
+
+    if(args.modeling_language):
+        if(args.modeling_language[0].upper() not in ACCEPTED_MODELING_LANGUAGES):
+            print('The modeling languages available are:')
+            print(ACCEPTED_MODELING_LANGUAGES)
+            print('Input received was: {}'.format(args.modeling_language[0]))
+            raise ValueError('Did not find solver with the specified name!')
+        MODELING_LANGUAGE_NAME = args.modeling_language[0]
+    else:
+        MODELING_LANGUAGE_NAME = DEFAULT_MODELING_LANGUAGE
 
     if(args.threads):
         NUM_THREADS = args.threads[0]
@@ -786,9 +770,27 @@ def main():
         geq_constraints = []
 
     # Solving the model using Google's OR-Tools
-    status = ortools_solve(A, b, c, m, n, var_range, row_range, leq_constraints, geq_constraints, var_type, 
-    obj_type, ub_inputs, lb_inputs, SOLVER_NAME, TOTAL_SOLVING_TIME, NUM_THREADS, PRINT_ZERO_VARS, 
-    DIGITS_ON_SOLUTION, RELATIVE_MIP_GAP_VALUE, VERBOSE_PRINT, PRINT_SOLUTION_LOG)
+    if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
+        solver, x, obj, cstr = build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
+            geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
+        status = solve_OR_Tools_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
+            RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG)
+        print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, 
+            DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+    # elif(MODELING_LANGUAGE_NAME == 'PYTHON_MIP'):
+    #     solver, x, obj, cstr = build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
+    #         geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
+    #     status = solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
+    #         RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG)
+    #     print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, 
+    #         DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+    # elif(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
+    #     solver, x, obj, cstr = build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
+    #         geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
+    #     status = solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
+    #         RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG)
+    #     print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, 
+    #         DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
 
     print('END OF FILE!')
 
