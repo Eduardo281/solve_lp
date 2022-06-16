@@ -366,8 +366,9 @@ def main():
     # Default solve_lp parameters:
     ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS']
     ACCEPTED_MODELING_LANGUAGES = ['GUROBIPY', 'OR-TOOLS', 'PYTHON-MIP']
-    DEFAULT_SOLVER = 'SCIP'
     DEFAULT_MODELING_LANGUAGE = 'OR-TOOLS'
+    DEFAULT_OR_TOOLS_SOLVER = 'SCIP'
+    DEFAULT_PYTHON_MIP_SOLVER = 'CBC'
     DEFAULT_SOLVING_TIME = 30
     DEFAULT_DIGITS_ON_SOLUTION = 5
     DEFAULT_NUM_THREADS = 1
@@ -396,12 +397,10 @@ def main():
         default=None, help = "How many digits to be considered in the final solution display.")
     parser.add_argument('-r', '--threads', nargs = 1, metavar='NUM_THREADS', type=int,
         default=None, help = 'Number of threads to be used by the solver')
-
     parser.add_argument('--memory-limit', nargs = 1, metavar='MEMORY_LIMIT_IN_GB', type=int,
         dest='memory_limit', default=None, help = '(only available using gurobipy)')
     parser.add_argument('--nodefile-start-size', nargs = 1, metavar='NODEFILE_START_SIZE_IN_GB', type=int,
         dest='nodefile_start_size', default=None, help = '(only available on gurobipy)')
-
     parser.add_argument('-m', '--modeling-language', nargs=1, metavar='MODELING_LANGUAGE', type=str,
         default=None, dest='modeling_language', 
         help = 'Which modeling language to use. Available: GUROBIPY, OR-TOOLS and PYTHON-MIP.')
@@ -491,16 +490,6 @@ def main():
     else:
         DIGITS_ON_SOLUTION = DEFAULT_DIGITS_ON_SOLUTION
 
-    if(args.solver):
-        if(args.solver[0].upper() not in ACCEPTED_SOLVERS):
-            print('The solvers available are:')
-            print(ACCEPTED_SOLVERS)
-            print('Input received was: {}'.format(args.solver[0]))
-            raise ValueError('Did not find solver with the specified name!')
-        SOLVER_NAME = args.solver[0]
-    else:
-        SOLVER_NAME = DEFAULT_SOLVER
-
     if(args.modeling_language):
         if(args.modeling_language[0].upper() not in ACCEPTED_MODELING_LANGUAGES):
             print('The modeling languages available are:')
@@ -510,6 +499,23 @@ def main():
         MODELING_LANGUAGE_NAME = args.modeling_language[0].upper()
     else:
         MODELING_LANGUAGE_NAME = DEFAULT_MODELING_LANGUAGE
+
+    if(args.solver):
+        if(args.solver[0].upper() not in ACCEPTED_SOLVERS):
+            print('The solvers available are:')
+            print(ACCEPTED_SOLVERS)
+            print('Input received was: {}'.format(args.solver[0]))
+            raise ValueError('Did not find solver with the specified name!')
+        SOLVER_NAME = args.solver[0]
+    else:
+        if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
+            SOLVER_NAME = DEFAULT_OR_TOOLS_SOLVER
+        elif(MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
+            SOLVER_NAME = DEFAULT_PYTHON_MIP_SOLVER
+        elif(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
+            SOLVER_NAME = 'GUROBI'
+        else:
+            raise RuntimeError('Problem processing the selected modeling language!')
 
     if(args.threads):
         NUM_THREADS = args.threads[0]
