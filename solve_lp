@@ -1,12 +1,5 @@
 #!/usr/bin/python3
 
-#######
-### TODO:
-### NEXT STEP: BUILD A CLEANER CODE
-### STARTED THIS OBJECTIVE WITH THE MODELING LANGUAGES
-### APPLY THE PRINCIPLE TO THE REST OF THE CODE!
-#######
-
 from ortools.linear_solver import pywraplp
 import mip
 import gurobipy as gp
@@ -535,6 +528,75 @@ def process_json_input_data(INPUT_FILE_PATH):
 def process_mps_input_data():
     pass
 
+def validate_and_build_solving_parameters(A, b, c, bin_vars, int_vars, leq_constraints, geq_constraints):
+    #Validating shapes:
+    if(len(b) != A.shape[0]):
+        raise RuntimeError('Shapes of b and A are incompatible!')
+
+    if(len(c) != A.shape[1]):
+        raise RuntimeError('Shapes of c and A are incompatible!')
+
+    # Building auxiliary size parameters:
+    m = A.shape[0]
+    n = A.shape[1]
+    var_range = range(1, n+1)
+    row_range = range(1, m+1)
+
+    # Input parameters changed into dictionaries:
+    A = {((i+1), (j+1)) : A[i][j] for i in range(len(A)) for j in range(len(A[i]))}
+    b = {(j+1) : b[j] for j in range(len(b))}
+    c = {(j+1) : c[j] for j in range(len(c))}
+
+    # Setting up the variables types:
+    var_type = {j: 'real' for j in var_range}
+
+    if(bin_vars != '*EMPTY*'):
+        if(bin_vars == '*'):
+            var_type = {j: 'binary' for j in var_range}
+        else:
+            var_type.update({j: 'binary' for j in bin_vars})
+    if(int_vars != '*EMPTY*'):
+        if(int_vars == '*'):
+            var_type = {j: 'int' for j in var_range}
+        else:
+            var_type.update({j: 'int' for j in int_vars})
+
+    # Validating leq and geq constraints:
+    if(leq_constraints == '*EMPTY*'):
+        leq_constraints = []
+    if(geq_constraints == '*EMPTY*'):
+        geq_constraints = []
+
+    return A, b, c, m, n, var_range, row_range, var_type, leq_constraints, geq_constraints
+
+def print_help_with_solvers_message():
+    print('*****')
+    print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
+    print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
+    print("For more information please refer to the solvers/or-tools documentations.")
+    print()
+    print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
+    print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
+    print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
+    print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
+    print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
+    print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('*) PDLP: Google First Order LP solver (...)')
+    print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
+    print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
+    print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('Where...')
+    print('BP = Binary Programming (only binary variables);')
+    print('IP = Integer Programming (integer and/or binary variables)')
+    print('LP = Linear Programming (only real variables)')
+    print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
+    print()
+    print('General notes:')
+    print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
+    print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
+    print('*****')
+
 def main():
     # Default solve_lp parameters:
     ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS']
@@ -609,32 +671,7 @@ def main():
     args = parser.parse_args()
 
     if(args.PRINT_HELP_WITH_SOLVERS):
-        print('*****')
-        print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
-        print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
-        print("For more information please refer to the solvers/or-tools documentations.")
-        print()
-        print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
-        print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
-        print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
-        print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-        print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
-        print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
-        print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-        print('*) PDLP: Google First Order LP solver (...)')
-        print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
-        print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
-        print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-        print('Where...')
-        print('BP = Binary Programming (only binary variables);')
-        print('IP = Integer Programming (integer and/or binary variables)')
-        print('LP = Linear Programming (only real variables)')
-        print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
-        print()
-        print('General notes:')
-        print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
-        print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
-        print('*****')
+        print_help_with_solvers_message()
         sys.exit(100)
 
     if(not args.file):
@@ -719,6 +756,8 @@ def main():
         c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = process_json_input_data(INPUT_FILE_PATH)
     elif(INPUT_TYPE == 'matrix'):
         c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = process_matrix_input_data(INPUT_FILE_PATH)
+    else:
+        raise RuntimeError('Problem with the input type!')
 
     if(VERBOSE_PRINT):
         print('Data file was read!')
@@ -765,39 +804,9 @@ def main():
     if(VERBOSE_PRINT):
         print('Validating data and starting to build the model...')
 
-    if(len(b) != A.shape[0]):
-        raise RuntimeError('Shapes of b and A are incompatible!')
-
-    if(len(c) != A.shape[1]):
-        raise RuntimeError('Shapes of c and A are incompatible!')
-
-    m = A.shape[0]
-    n = A.shape[1]
-
-    A = {((i+1), (j+1)) : A[i][j] for i in range(len(A)) for j in range(len(A[i]))}
-    b = {(j+1) : b[j] for j in range(len(b))}
-    c = {(j+1) : c[j] for j in range(len(c))}
-
-    var_range = range(1, n+1)
-    row_range = range(1, m+1)
-
-    var_type = {j: 'real' for j in var_range}
-
-    if(bin_vars != '*EMPTY*'):
-        if(bin_vars == '*'):
-            var_type = {j: 'binary' for j in var_range}
-        else:
-            var_type.update({j: 'binary' for j in bin_vars})
-    if(int_vars != '*EMPTY*'):
-        if(int_vars == '*'):
-            var_type = {j: 'int' for j in var_range}
-        else:
-            var_type.update({j: 'int' for j in int_vars})
-
-    if(leq_constraints == '*EMPTY*'):
-        leq_constraints = []
-    if(geq_constraints == '*EMPTY*'):
-        geq_constraints = []
+    A, b, c, m, n, var_range, row_range, var_type, leq_constraints, geq_constraints = validate_and_build_solving_parameters(
+        A, b, c, bin_vars, int_vars, leq_constraints, geq_constraints
+    )
 
     # Solving the model using Google's OR-Tools
     if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
