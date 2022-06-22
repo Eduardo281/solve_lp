@@ -382,13 +382,17 @@ def process_matrix_input_data(INPUT_FILE_PATH):
                     raise RuntimeError('Did not find ; at the of line {} of A matrix'.format(present_A_line))
 
             if(re.search('^b[ ]*=[ ]*\[', line)):
-                if(re.search('[+-] ', line)):
-                    raise RuntimeError('Isolated + or - signal find while reading b vector!')
-                b = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
+                start_point = line.find('[')
+                if((line[-1] != ']') or (start_point == -1)):
+                    raise RuntimeError('Input b must be in the format: b = [val_1, val_2, ..., val_m]')
+                else:
+                    b = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
             if(re.search('^c[ ]*=[ ]*\[', line)):
-                if(re.search('[+-] ', line)):
-                    raise RuntimeError('Isolated + or - signal find while reading c vector!')
-                c = [float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)]
+                start_point = line.find('[')
+                if((line[-1] != ']') or (start_point == -1)):
+                    raise RuntimeError('Input c must be in the format: c = [val_1, val_2, ..., val_n]')
+                else:
+                    c = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
             if(re.search('^A[ ]*=[ ]*\[', line)):
                 present_A_line = 1
                 if(re.search('[+-] ', line)):
