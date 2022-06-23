@@ -364,7 +364,6 @@ def process_matrix_input_data(INPUT_FILE_PATH):
     obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = build_empty_parameters()
     present_A_line = 0
     scanning_A_matrix = False
-    var_type = dict()
     with open(INPUT_FILE_PATH) as file:
         for raw_line in file:
             line = raw_line.strip()
@@ -497,9 +496,9 @@ def process_matrix_input_data(INPUT_FILE_PATH):
 def process_json_input_data(INPUT_FILE_PATH):
     with open(INPUT_FILE_PATH) as file:
         data_json = json.load(file)
-    c = data_json['c']
-    b = data_json['b']
-    A = data_json['A']
+    b = np.array(data_json['b'], dtype=float)
+    c = np.array(data_json['c'], dtype=float)
+    A = np.array(data_json['A'], dtype=float)
     obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = build_empty_parameters()
     if('obj' in data_json.keys()):
         obj_type = data_json['obj']
