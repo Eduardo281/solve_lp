@@ -362,17 +362,47 @@ def process_matrix_input_data(INPUT_FILE_PATH):
     b = list()
     A = list()
     obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = build_empty_parameters()
+
+    # Function to read the "bin", "int", "leq" and "geq" inputs:
+    def read_range_friendly_input_format(input_line):
+        if(line[-1] == '*'):
+            values = '*'
+            return 
+        values = list()
+        aux_vals_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
+        aux_vals_list = aux_vals_list.strip().split(',')
+        for entry in aux_vals_list:
+            if('-' in entry):
+                val1, val2 = entry.split('-')
+                val1 = int(val1.strip())
+                val2 = int(val2.strip())
+                values.extend(list(range(val1, val2+1)))
+            else:
+                values.append(int(entry.strip()))
+        return values
+
+    # Function to read the "ub" and "lb" values
+    def read_number_or_array_input_format(input_line):
+        try:
+            values = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
+        except:
+            values = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
+            values = values.strip().split(',')
+            values = np.array(values, dtype=float)
+        return values
+
     present_A_line = 0
     scanning_A_matrix = False
     with open(INPUT_FILE_PATH) as file:
         for raw_line in file:
             line = raw_line.strip()
 
+            # If the reader is processing the lines of the A matrix:
             if(scanning_A_matrix):
                 present_A_line += 1
-                if(re.search('[+-] ', line)):
-                    raise RuntimeError('Isolated + or - signal find while reading line {} of A matrix!'.format(present_A_line))
-                A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
+                if(not line[-1] in '];'):
+                    raise RuntimeError('The A matrix lines must end with ] or ;')
+                A.append([value.strip() for value in line[:-1].split(',')])
                 if(line[-1] == ';'):
                     continue
                 elif(line[-1] == ']'):
@@ -380,117 +410,77 @@ def process_matrix_input_data(INPUT_FILE_PATH):
                 else:
                     raise RuntimeError('Did not find ; at the of line {} of A matrix'.format(present_A_line))
 
+            # Reading the b = [...] line:
             if(re.search('^b[ ]*=[ ]*\[', line)):
                 start_point = line.find('[')
                 if((line[-1] != ']') or (start_point == -1)):
                     raise RuntimeError('Input b must be in the format: b = [val_1, val_2, ..., val_m]')
-                else:
-                    b = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
+                b = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
+                continue
+
+            # Reading the c = [...] line:
             if(re.search('^c[ ]*=[ ]*\[', line)):
                 start_point = line.find('[')
                 if((line[-1] != ']') or (start_point == -1)):
                     raise RuntimeError('Input c must be in the format: c = [val_1, val_2, ..., val_n]')
-                else:
-                    c = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
+                c = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
+                continue
+
+            # Reading the first line of the A matrix:
             if(re.search('^A[ ]*=[ ]*\[', line)):
                 present_A_line = 1
-                if(re.search('[+-] ', line)):
-                    raise RuntimeError('Isolated + or - signal find while reading the 1st line of A matrix!')
-                A.append([float(value) for value in re.findall('[+-]?[\d]+\.[\d]+|[+-]?[\d]+', line)])
+                start_point = line.find('[')
+                if(start_point == -1):
+                    raise RuntimeError('Did not find the left square brackets [ while scanning the A matrix')
+                if(not line[-1] in '];'):
+                    raise RuntimeError('The A matrix lines must end with ] or ;')
+                A.append([value.strip() for value in line[start_point+1:-1].split(',')])
                 if(line[-1] == ']'):
                     scanning_A_matrix = False
                 else:
                     scanning_A_matrix = True
-
-            if(re.search('^leq[ ]*=[ ]*', line)):
-                if(line[-1] == '*'):
-                    leq_constraints = '*'
-                    continue
-                leq_constraints = list()
-                aux_leq_cstr = re.search('=([ 0-9\-\,]+)$', line).group(1)
-                aux_leq_cstr = aux_leq_cstr.strip().split(',')
-                for entry in aux_leq_cstr:
-                    if('-' in entry):
-                        val1, val2 = entry.split('-')
-                        val1 = int(val1.strip())
-                        val2 = int(val2.strip())
-                        leq_constraints.extend(list(range(val1, val2+1)))
-                    else:
-                        leq_constraints.append(int(entry.strip()))
-                continue
-
-            if(re.search('^geq[ ]*=[ ]*', line)):
-                if(line[-1] == '*'):
-                    geq_constraints = '*'
-                    continue
-                geq_constraints = list()
-                aux_geq_cstr = re.search('=([ 0-9\-\,]+)$', line).group(1)
-                aux_geq_cstr = aux_geq_cstr.strip().split(',')
-                for entry in aux_geq_cstr:
-                    if('-' in entry):
-                        val1, val2 = entry.split('-')
-                        val1 = int(val1.strip())
-                        val2 = int(val2.strip())
-                        geq_constraints.extend(list(range(val1, val2+1)))
-                    else:
-                        geq_constraints.append(int(entry.strip()))
-                continue
-
+            
+            # Reading the obj input line:
             if(re.search('^obj[ ]*=[ ]*', line)):
                 aux_obj_type = re.search('=(.*)$', line).group(1)
                 obj_type = aux_obj_type.strip().lower()
                 if((obj_type != 'min') and (obj_type != 'max')):
                     raise RuntimeError('Problem with the objective function specified!')
 
+            # Reading the leq input line:
+            if(re.search('^leq[ ]*=[ ]*', line)):
+                leq_constraints = read_range_friendly_input_format(line)
+                continue
+
+            # Reading the geq input line:
+            if(re.search('^geq[ ]*=[ ]*', line)):
+                geq_constraints = read_range_friendly_input_format(line)
+                continue
+
+            # Reading the ub input line:
             if(re.search('^ub[ ]*=[ ]*', line)):
-                try:
-                    ub_inputs = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
-                except:
-                    ub_inputs = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
-                    ub_inputs = ub_inputs.strip().split(',')
-                    ub_inputs = np.array(ub_inputs, dtype=float)
+                ub_inputs = read_number_or_array_input_format(line)
+                continue
 
+            # Reading the lb input line:
             if(re.search('^lb[ ]*=[ ]*', line)):
-                try:
-                    lb_inputs = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
-                except:
-                    lb_inputs = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
-                    lb_inputs = lb_inputs.strip().split(',')
-                    lb_inputs = np.array(lb_inputs, dtype=float)
+                lb_inputs = read_number_or_array_input_format(line)
+                continue
 
+            # Reading the bin input line:
             if(re.search('^bin[ ]*=[ ]*', line)):
-                if(line[-1] == '*'):
-                    bin_vars = '*'
-                    continue
-                bin_vars = list()
-                aux_bin_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
-                aux_bin_list = aux_bin_list.strip().split(',')
-                for entry in aux_bin_list:
-                    if('-' in entry):
-                        val1, val2 = entry.split('-')
-                        val1 = int(val1.strip())
-                        val2 = int(val2.strip())
-                        bin_vars.extend(list(range(val1, val2+1)))
-                    else:
-                        bin_vars.append(int(entry.strip()))
+                bin_vars = read_range_friendly_input_format(line)
                 continue
 
+            # Reading the int input line:
             if(re.search('^int[ ]*=[ ]*', line)):
-                if(line[-1] == '*'):
-                    int_vars = '*'
-                    continue
-                int_vars = list()
-                aux_int_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
-                aux_int_list = aux_int_list.strip().split(',')
-                for entry in aux_int_list:
-                    if('-' in entry):
-                        val1, val2 = entry.split('-')
-                        val1 = int(val1.strip())
-                        val2 = int(val2.strip())
-                        int_vars.extend(list(range(val1, val2+1)))
-                    else:
-                        int_vars.append(int(entry.strip()))
+                int_vars = read_range_friendly_input_format(line)
                 continue
+
+    c = np.array(c, dtype=float)
+    b = np.array(b, dtype=float)
+    A = np.array(A, dtype=float)
+
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
 def process_json_input_data(INPUT_FILE_PATH):
@@ -769,10 +759,6 @@ def main():
         print()
 
     # Creating the optimization model and the variables:
-    b = np.array(b)
-    c = np.array(c)
-    A = np.array(A)
-
     print('b:')
     print(b)
     print()
