@@ -521,7 +521,7 @@ def process_json_input_data(INPUT_FILE_PATH):
 def process_mps_input_data():
     pass
 
-def validate_and_build_solving_parameters(A, b, c, bin_vars, int_vars, leq_constraints, geq_constraints):
+def validate_and_build_solving_parameters(A, b, c, obj_type, bin_vars, int_vars, leq_constraints, geq_constraints):
     #Validating shapes:
     if(len(b) != A.shape[0]):
         raise RuntimeError('Shapes of b and A are incompatible!')
@@ -560,7 +560,10 @@ def validate_and_build_solving_parameters(A, b, c, bin_vars, int_vars, leq_const
     if(geq_constraints == '*EMPTY*'):
         geq_constraints = []
 
-    return A, b, c, m, n, var_range, row_range, var_type, leq_constraints, geq_constraints
+    if(obj_type == '*EMPTY*'):
+        obj_type = 'min'
+
+    return A, b, c, m, n, obj_type, var_range, row_range, var_type, leq_constraints, geq_constraints
 
 def print_help_with_solvers_message():
     print('*****')
@@ -809,9 +812,9 @@ def main():
         print('Validating data and starting to build the model...')
 
     # Last data processing before build the solver:
-    (A, b, c, m, n, var_range, row_range, var_type, 
+    (A, b, c, m, n, obj_type, var_range, row_range, var_type, 
     leq_constraints, geq_constraints) = validate_and_build_solving_parameters(
-        A, b, c, bin_vars, int_vars, leq_constraints, geq_constraints
+        A, b, c, obj_type, bin_vars, int_vars, leq_constraints, geq_constraints
     )
 
     if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
