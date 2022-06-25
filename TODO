@@ -1,0 +1,30 @@
+0) Finish the "cleaning the code" stage!: [OK!]
+
+1) Define what will be the type of the matrix inputs (.mat?);
+
+2) Add the MPS reader functionality;
+
+3) Add an "infer input type" functionality to Solve_LP;
+    -> First criteria: Input file extension;
+    -> Second criteria: Try-and-error reading the data;
+
+4) Define how a json-output file would looks like;
+
+5) Add the json-export functionality;
+
+6) Add the mps-export functionality (to convert models from other input styles);
+
+7) Add the non-solve functionality (to only convert models and not to solve);
+
+8) Finish the README.md file;
+
+9) Finish the User_Guide.pdf file;
+
+10) Finish the index.html file;
+
+*** Finally: Change the repository to public instead of private. ***
+
+-> Next Stage Ideas:
+    -> Add the linear solution procedure to be used (primal, dual, ...);
+    -> Add the "autofill" to empty values in the matrix input;
+    -> Add the "export log file" functionality;
