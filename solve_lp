@@ -742,12 +742,15 @@ def main():
     # Building the argument parser:
     parser = build_arg_parser()
 
+    # Retrieving data from the argument parser:
     args = parser.parse_args()
 
+    # When printing the "help from solvers" option, the system will exit after:
     if(args.PRINT_HELP_WITH_SOLVERS):
         print_help_with_solvers_message()
         sys.exit(100)
 
+    # If no input file is passed, it will raise an error:
     if(not args.file):
         raise RuntimeError('The following argument is required: -f/--file')
 
@@ -757,18 +760,23 @@ def main():
     MODELING_LANGUAGE_NAME, SOLVER_NAME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, 
     MEMORY_LIMIT, NODEFILE_START_SIZE) = process_args_from_parser(args, default_arguments)
 
+    # Verbose mode information printing
     if(VERBOSE_PRINT):
         print('Solve_LP started!')
         print()
         print('Reading input data file...')
 
+    # Reading the input data:
     if(INPUT_TYPE == 'json'):
-        c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = process_json_input_data(INPUT_FILE_PATH)
+        (c, b, A, obj_type, leq_constraints, geq_constraints, 
+        bin_vars, int_vars, lb_inputs, ub_inputs) = process_json_input_data(INPUT_FILE_PATH)
     elif(INPUT_TYPE == 'matrix'):
-        c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = process_matrix_input_data(INPUT_FILE_PATH)
+        (c, b, A, obj_type, leq_constraints, geq_constraints, 
+        bin_vars, int_vars, lb_inputs, ub_inputs) = process_matrix_input_data(INPUT_FILE_PATH)
     else:
         raise RuntimeError('Problem with the input type!')
 
+    # Verbose mode information printing
     if(VERBOSE_PRINT):
         print('Data file was read!')
         print()
@@ -778,44 +786,36 @@ def main():
     # Creating the optimization model and the variables:
     print('b:')
     print(b)
-    print()
     print('c:')
     print(c)
-    print()
     print('A:')
     print(A)
-    print()
     print('leq:')
     print(leq_constraints)
-    print()
     print('geq:')
-    print('TODO')
-    print()
+    print(geq_constraints)
     print('bin:')
     print(bin_vars)
-    print()
     print('int:')
     print(int_vars)
-    print()
-    print('obj_type:')
-    print(obj_type)
-    print()
+    print('obj_type:' + obj_type + "\n")
     print('ub_inputs:')
     print(ub_inputs)
-    print()
     print('lb_inputs:')
     print(lb_inputs)
-    print()
 
+    # Verbose mode information printing
     if(VERBOSE_PRINT):
         print('Validating data and starting to build the model...')
 
-    A, b, c, m, n, var_range, row_range, var_type, leq_constraints, geq_constraints = validate_and_build_solving_parameters(
+    # Last data processing before build the solver:
+    (A, b, c, m, n, var_range, row_range, var_type, 
+    leq_constraints, geq_constraints) = validate_and_build_solving_parameters(
         A, b, c, bin_vars, int_vars, leq_constraints, geq_constraints
     )
 
-    # Solving the model using Google's OR-Tools
     if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
+        # Solving the model using Google's OR-Tools with the selected solver
         solver, x, obj, cstr = build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
             geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
         status = solve_OR_Tools_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
@@ -823,6 +823,7 @@ def main():
         print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, 
             DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
     elif(MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
+        # Solving the model using Python MIP with the selected solver
         solver, x, obj, cstr = build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
             geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
         status = solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
@@ -830,6 +831,7 @@ def main():
         print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, 
             DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
     elif(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
+        # Solving the model using Gurobi with its own modeling language
         solver, x, obj, cstr = build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
             geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, MEMORY_LIMIT)
         status = solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
