@@ -590,20 +590,7 @@ def print_help_with_solvers_message():
     print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
     print('*****')
 
-def main():
-    # Default solve_lp parameters:
-    ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS']
-    ACCEPTED_MODELING_LANGUAGES = ['GUROBIPY', 'OR-TOOLS', 'PYTHON-MIP']
-    DEFAULT_MODELING_LANGUAGE = 'OR-TOOLS'
-    DEFAULT_OR_TOOLS_SOLVER = 'SCIP'
-    DEFAULT_PYTHON_MIP_SOLVER = 'CBC'
-    DEFAULT_SOLVING_TIME = 30
-    DEFAULT_DIGITS_ON_SOLUTION = 5
-    DEFAULT_NUM_THREADS = 1
-    DEFAULT_MIP_GAP = 10**(-5)
-    DEFAULT_INPUT_TYPE = 'matrix'
-
-    # Building the argument parser:
+def build_arg_parser():
     parser = argparse.ArgumentParser(prog='solve_lp', 
         allow_abbrev=False,
         description = '''Solve_lp is a CLI used to solve linear programming problems in a simple way.''',
@@ -660,6 +647,24 @@ def main():
     input_type_meg_parser.add_argument('--model-input', dest='input_type', action='store_const', const='model')
     input_type_meg_parser.add_argument('--json-input', dest='input_type', action='store_const', const='json')
     input_type_meg_parser.set_defaults(input_type=None)
+
+    return parser
+
+def main():
+    # Default solve_lp parameters:
+    ACCEPTED_SOLVERS = ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS']
+    ACCEPTED_MODELING_LANGUAGES = ['GUROBIPY', 'OR-TOOLS', 'PYTHON-MIP']
+    DEFAULT_MODELING_LANGUAGE = 'OR-TOOLS'
+    DEFAULT_OR_TOOLS_SOLVER = 'SCIP'
+    DEFAULT_PYTHON_MIP_SOLVER = 'CBC'
+    DEFAULT_SOLVING_TIME = 30
+    DEFAULT_DIGITS_ON_SOLUTION = 5
+    DEFAULT_NUM_THREADS = 1
+    DEFAULT_MIP_GAP = 10**(-5)
+    DEFAULT_INPUT_TYPE = 'matrix'
+
+    # Building the argument parser:
+    parser = build_arg_parser()
 
     args = parser.parse_args()
 
