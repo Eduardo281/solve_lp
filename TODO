@@ -1,8 +1,8 @@
 0) Finish the "cleaning the code" stage!: [OK!]
 
-        || 1) Define what will be the type of the matrix inputs (.mat?);
+        || 1) Add the MPS reader functionality; [PARTIAL!]
         || 
-INPUTS  || 2) Add the MPS reader functionality;
+INPUTS  || 2) Define what will be the type of the matrix inputs (.mat?);
 BRANCH  || 
         || 3) Add an "infer input type" functionality to Solve_LP;
         ||     -> First criteria: Input file extension;
