@@ -735,7 +735,10 @@ def process_args_from_parser(args, default_arguments):
             raise ValueError('Did not find solver with the specified name!')
         MODELING_LANGUAGE_NAME = args.modeling_language[0].upper()
     else:
-        MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE"]
+        if(INPUT_TYPE in ['matrix', 'json']):
+            MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE_MAT_JSON"]
+        elif(INPUT_TYPE in ['mps', 'lp']):
+            MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE_LP_MPS"]
 
     if(args.solver):
         if(args.solver[0].upper() not in default_arguments["ACCEPTED_SOLVERS"]):
@@ -783,7 +786,8 @@ def main():
     default_arguments = {
         "ACCEPTED_SOLVERS": ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS'],
         "ACCEPTED_MODELING_LANGUAGES": ['GUROBIPY', 'OR-TOOLS', 'PYTHON-MIP'],
-        "DEFAULT_MODELING_LANGUAGE": 'OR-TOOLS',
+        "DEFAULT_MODELING_LANGUAGE_MAT_JSON": 'OR-TOOLS',
+        "DEFAULT_MODELING_LANGUAGE_LP_MPS": 'PYTHON-MIP',
         "DEFAULT_OR_TOOLS_SOLVER": 'SCIP',
         "DEFAULT_PYTHON_MIP_SOLVER": 'CBC',
         "DEFAULT_SOLVING_TIME":  30,
