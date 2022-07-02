@@ -399,7 +399,7 @@ def process_matrix_input_data(INPUT_FILE_PATH):
     def read_range_friendly_input_format(input_line):
         if(line[-1] == '*'):
             values = '*'
-            return 
+            return values
         values = list()
         aux_vals_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
         aux_vals_list = aux_vals_list.strip().split(',')
