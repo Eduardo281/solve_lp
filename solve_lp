@@ -88,8 +88,20 @@ def solve_OR_Tools_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP_G
 
     return status
 
-def print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
-    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+def print_OR_Tools_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
+    print('Variables defined: [ ')
+    print('    ', end='')
+    for var in solver.variables():
+        print(f'{var.name()}', end=' ')
+    print('\n]')
+
+    if(solver.Objective().minimization()):
+        obj_type = 'MIN'
+    elif(solver.Objective().maximization()):
+        obj_type = 'MAX'
+    else:
+        raise RuntimeError('Problem in printing the objective function type!')
+
     print('Objective function being considered: {}'.format(obj_type.upper()))
     if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
         ObjVal = solver.Objective().Value()
@@ -100,12 +112,12 @@ def print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON
             print('The solution found is OPTIMAL!')
         print('Variables values:')
         if(PRINT_ZERO_VARS):
-            for j in var_range:
-                print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+            for var in solver.variables():
+                print('{} = {}'.format(var.name(), round(var.solution_value(), DIGITS_ON_SOLUTION)))
         else:
-            for j in var_range:
-                if(x[j].solution_value() != 0):
-                    print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+            for var in solver.variables():
+                if(var.solution_value() != 0):
+                    print('{} = {}'.format(var.name(), round(var.solution_value(), DIGITS_ON_SOLUTION)))
     elif(status == solver.UNBOUNDED):
         print('The problem is unbounded!')
     else:
@@ -863,8 +875,7 @@ def main():
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
             status = solve_OR_Tools_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
                 RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG)
-            print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, 
-                DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+            print_OR_Tools_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
         elif(MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
             # Solving the model using Python MIP with the selected solver
             solver, x, obj, cstr = build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
