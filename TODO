@@ -2,7 +2,7 @@
 
         || 1) Add the MPS reader functionality; [OK!]
         || 
-INPUTS  || 2) Define what will be the type of the matrix inputs (.mat?);
+INPUTS  || 2) Define what will be the type of the matrix inputs (.mat?) [OK!];
 BRANCH  || 
         || 3) Add an "infer input type" functionality to Solve_LP;
         ||     -> First criteria: Input file extension;
