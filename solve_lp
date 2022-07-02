@@ -518,7 +518,7 @@ def process_json_input_data(INPUT_FILE_PATH):
         lb_inputs = data_json['lb']
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
-def process_mps_input_model(MODELING_LANGUAGE_NAME, SOLVER_NAME, model_path):
+def process_mps_or_lp_input_model(MODELING_LANGUAGE_NAME, SOLVER_NAME, model_path, input_type):
     if(MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         # Setting up the selected optimization solver:
         if(SOLVER_NAME.upper()=="CBC"):
@@ -531,7 +531,12 @@ def process_mps_input_model(MODELING_LANGUAGE_NAME, SOLVER_NAME, model_path):
     elif(MODELING_LANGUAGE_NAME == "GUROBIPY"):
         solver = gp.read(model_path)
     else:
-        raise RuntimeError('Problem reading MPS input file!')
+        if(input_type == 'mps'):
+            raise RuntimeError('Problem reading MPS input file!')
+        elif(input_type == 'lp'):
+            raise RuntimeError('Problem reading LP input file!')
+        else:
+            raise RuntimeError('Unknown problem while reading the input file!')
     return solver
 
 def validate_and_build_solving_parameters(A, b, c, obj_type, bin_vars, int_vars, leq_constraints, geq_constraints):
@@ -661,8 +666,8 @@ def build_arg_parser():
     input_type_meg_parser = parser.add_mutually_exclusive_group(required=False)
     input_type_meg_parser.add_argument('--matrix-input', dest='input_type', action='store_const', const='matrix')
     input_type_meg_parser.add_argument('--mps-input', dest='input_type', action='store_const', const='mps')
-    input_type_meg_parser.add_argument('--model-input', dest='input_type', action='store_const', const='model')
     input_type_meg_parser.add_argument('--json-input', dest='input_type', action='store_const', const='json')
+    input_type_meg_parser.add_argument('--lp-input', dest='input_type', action='store_const', const='lp')
     input_type_meg_parser.set_defaults(input_type=None)
 
     return parser
@@ -783,7 +788,7 @@ def main():
         print()
         print('Reading input data file...')
 
-    if(INPUT_TYPE != 'mps'):
+    if(INPUT_TYPE in ['matrix', 'json']):
         # Reading the input data:
         if(INPUT_TYPE == 'json'):
             (c, b, A, obj_type, leq_constraints, geq_constraints, 
@@ -858,8 +863,8 @@ def main():
                 DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
         else:
             raise RuntimeError('Problem processing the selected modeling language!')
-    else:
-        solver = process_mps_input_model(MODELING_LANGUAGE_NAME, SOLVER_NAME, INPUT_FILE_PATH)
+    elif(INPUT_TYPE in ['mps', 'lp']):
+        solver = process_mps_or_lp_input_model(MODELING_LANGUAGE_NAME, SOLVER_NAME, INPUT_FILE_PATH, INPUT_TYPE)
         if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
             pass
         if(MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
