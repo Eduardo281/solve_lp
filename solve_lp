@@ -203,8 +203,20 @@ PRINT_SOLUTION_LOG, NODEFILE_START_SIZE):
 
     return solver.Status
 
-def print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
-    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+def print_Gurobipy_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
+    print('Variables defined: [ ')
+    print('    ', end='')
+    for var in solver.getVars():
+        print(f'{var.VarName}', end=' ')
+    print('\n]')
+
+    if(solver.ModelSense == gp.GRB.MINIMIZE):
+        obj_type = 'MIN'
+    elif(solver.ModelSense == gp.GRB.MAXIMIZE):
+        obj_type = 'MAX'
+    else:
+        raise RuntimeError('Problem in printing the objective function type!')
+
     print('Objective function being considered: {}'.format(obj_type.upper()))
     if((status == gp.GRB.SUBOPTIMAL) or (status == gp.GRB.OPTIMAL)):
         ObjVal = solver.ObjVal
@@ -215,12 +227,12 @@ def print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON
             print('The solution found is OPTIMAL!')
         print('Variables values:')
         if(PRINT_ZERO_VARS):
-            for j in var_range:
-                print('x[{}] = {}'.format(j, round(x[j].X, DIGITS_ON_SOLUTION)))
+            for var in solver.getVars():
+                print('{} = {}'.format(var.VarName, round(var.X, DIGITS_ON_SOLUTION)))
         else:
-            for j in var_range:
-                if(x[j].X != 0):
-                    print('x[{}] = {}'.format(j, round(x[j].X, DIGITS_ON_SOLUTION)))
+            for var in solver.getVars():
+                if(var.X != 0):
+                    print('{} = {}'.format(var.VarName, round(var.X, DIGITS_ON_SOLUTION)))
     elif(status == gp.GRB.UNBOUNDED):
         print('The problem is unbounded!')
     else:
@@ -859,7 +871,7 @@ def main():
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, MEMORY_LIMIT)
             status = solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
                 RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, NODEFILE_START_SIZE)
-            print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, 
+            print_Gurobipy_solution(solver, status, 
                 DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
         else:
             raise RuntimeError('Problem processing the selected modeling language!')
@@ -875,8 +887,8 @@ def main():
         if(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
             status = solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
                 RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, NODEFILE_START_SIZE)
-            # print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, 
-            #     DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+            print_Gurobipy_solution(solver, status, 
+                DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
 
     print('END OF FILE!')
 
