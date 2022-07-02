@@ -333,9 +333,17 @@ def solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP
 
     return status
 
-def print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
-    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+def print_Python_MIP_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
+    print('Variables defined: [ ')
+    print('    ', end='')
+    for var in solver.vars:
+        print(f'{var.name}', end=' ')
+    print('\n]')
+
+    obj_type = solver.sense
+
     print('Objective function being considered: {}'.format(obj_type.upper()))
+
     if((status == mip.OptimizationStatus.FEASIBLE) or (status == mip.OptimizationStatus.OPTIMAL)):
         ObjVal = solver.objective_value
         print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
@@ -345,12 +353,12 @@ def print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, DIGITS_
             print('The solution found is OPTIMAL!')
         print('Variables values:')
         if(PRINT_ZERO_VARS):
-            for j in var_range:
-                print('x[{}] = {}'.format(j, round(x[j].x, DIGITS_ON_SOLUTION)))
+            for var in solver.vars:
+                print('{} = {}'.format(var.name, round(var.x, DIGITS_ON_SOLUTION)))
         else:
-            for j in var_range:
-                if(x[j].x != 0):
-                    print('x[{}] = {}'.format(j, round(x[j].x, DIGITS_ON_SOLUTION)))
+            for var in solver.vars:
+                if(var.x != 0):
+                    print('{} = {}'.format(var.name, round(var.x, DIGITS_ON_SOLUTION)))
     elif(status == mip.OptimizationStatus.UNBOUNDED):
         print('The problem is unbounded!')
     else:
@@ -863,16 +871,14 @@ def main():
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
             status = solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
                 RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, CHECK_CLIQUE_MERGE)
-            print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, 
-                DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+            print_Python_MIP_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
         elif(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
             # Solving the model using Gurobi with its own modeling language
             solver, x, obj, cstr = build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, MEMORY_LIMIT)
             status = solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
                 RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, NODEFILE_START_SIZE)
-            print_Gurobipy_solution(solver, status, 
-                DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+            print_Gurobipy_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
         else:
             raise RuntimeError('Problem processing the selected modeling language!')
     elif(INPUT_TYPE in ['mps', 'lp']):
@@ -882,13 +888,11 @@ def main():
         if(MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
             status = solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
                 RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, CHECK_CLIQUE_MERGE)
-            # print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, 
-            #     DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+            print_Python_MIP_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
         if(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
             status = solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
                 RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, NODEFILE_START_SIZE)
-            print_Gurobipy_solution(solver, status, 
-                DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
+            print_Gurobipy_solution(solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
 
     print('END OF FILE!')
 
