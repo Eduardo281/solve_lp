@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from typing import Tuple
 from ortools.linear_solver import pywraplp
 import mip
 import gurobipy as gp
@@ -13,8 +14,10 @@ from collections import namedtuple
 
 import argparse
 
-def build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
-geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params):
+def build_OR_Tools_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
+var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
+var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
+params: Tuple) -> Tuple[pywraplp.Solver, dict, pywraplp.Objective, dict]:
     # Create the solver object and the infinity value:
     solver = pywraplp.Solver.CreateSolver(params.SOLVER_NAME)
     infinity = solver.infinity()
@@ -74,7 +77,7 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params):
 
     return solver, x, obj, cstr
 
-def solve_OR_Tools_model(solver, params):
+def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
     # Solving the problem and printing results:
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.set_time_limit(params.TOTAL_SOLVING_TIME * 1000)
@@ -90,7 +93,7 @@ def solve_OR_Tools_model(solver, params):
 
     return status
 
-def print_OR_Tools_solution(solver, status, params):
+def print_OR_Tools_solution(solver: pywraplp.Solver, status: int, params: Tuple):
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.variables():
@@ -125,8 +128,10 @@ def print_OR_Tools_solution(solver, status, params):
     else:
         print('No solution found!')
 
-def build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
-geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params):
+def build_Gurobipy_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
+var_range: range, row_range: range, leq_constraints: list, geq_constraints:list, 
+var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
+params: Tuple) -> Tuple[gp.Model, dict, None, dict]:
     if(params.MEMORY_LIMIT):
         env = gp.Env(empty=True)
         env.setParam("MemLimit", params.MEMORY_LIMIT)
@@ -199,7 +204,7 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params):
 
     return solver, x, obj, cstr
 
-def solve_Gurobipy_model(solver, params):
+def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
     # Solving the problem and printing results:
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.setParam('TimeLimit', params.TOTAL_SOLVING_TIME)
@@ -216,7 +221,7 @@ def solve_Gurobipy_model(solver, params):
 
     return solver.Status
 
-def print_Gurobipy_solution(solver, status, params):
+def print_Gurobipy_solution(solver: gp.Model, status: int, params: Tuple):
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.getVars():
@@ -253,8 +258,10 @@ def print_Gurobipy_solution(solver, status, params):
 
     return status
 
-def build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
-geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params):
+def build_Python_MIP_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
+var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
+var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
+params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
     # Processing objective type:
     if(obj_type == '*EMPTY*'):
         obj_type = 'min'
@@ -329,7 +336,7 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params):
 
     return solver, x, obj, cstr
 
-def solve_Python_MIP_model(solver, params):
+def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.OptimizationStatus:
     # Solving the problem and printing results:
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.max_seconds = params.TOTAL_SOLVING_TIME
@@ -346,7 +353,7 @@ def solve_Python_MIP_model(solver, params):
 
     return status
 
-def print_Python_MIP_solution(solver, status, params):
+def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus, params: Tuple):
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.vars:
@@ -901,10 +908,13 @@ def main():
         # Creating the optimization model and the variables:
         print('b:')
         print(b)
+        print(type(b))
         print('c:')
         print(c)
+        print(type(c))
         print('A:')
         print(A)
+        print(type(A))
         print('leq:')
         print(leq_constraints)
         print('geq:')
@@ -913,11 +923,13 @@ def main():
         print(bin_vars)
         print('int:')
         print(int_vars)
-        print('obj_type:' + obj_type + "\n")
+        print('obj_type: ' + obj_type + "\n")
         print('ub_inputs:')
         print(ub_inputs)
+        print(type(ub_inputs))
         print('lb_inputs:')
         print(lb_inputs)
+        print(type(lb_inputs))
 
         # Verbose mode information printing
         if(params.VERBOSE_PRINT):
