@@ -4,9 +4,9 @@
         || 
 INPUTS  || 2) Define what will be the type of the matrix inputs (.mat?) [OK!];
 BRANCH  || 
-        || 3) Add an "infer input type" functionality to Solve_LP;
-        ||     -> First criteria: Input file extension;
-        ||     -> Second criteria: Try-and-error reading the data;
+        || 3) Add an "infer input type" functionality to Solve_LP [OK!];
+        ||     -> First criteria: Input file extension [OK!];
+        ||     -> Second criteria: Try-and-error reading the data [OK!];
 
         || 4) Define how a json-output file would looks like;
         || 
