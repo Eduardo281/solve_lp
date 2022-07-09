@@ -7,6 +7,8 @@ BRANCH  ||
         || 3) Add an "infer input type" functionality to Solve_LP [OK!];
         ||     -> First criteria: Input file extension [OK!];
         ||     -> Second criteria: Try-and-error reading the data [OK!];
+        || 
+        || ~EXTRA~) Add type hints to the functions [PARTIAL!]
 
         || 4) Define how a json-output file would looks like;
         || 
