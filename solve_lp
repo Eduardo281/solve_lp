@@ -5,8 +5,9 @@ import mip
 import gurobipy as gp
 
 import numpy as np
-import re
 import sys
+import os
+import re
 import json
 from collections import namedtuple
 
@@ -696,6 +697,7 @@ def build_arg_parser():
     verbose_meg_parser.set_defaults(clique_merge=False)
 
     input_type_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    input_type_meg_parser.add_argument('--infer-input', dest='input_type', action='store_const', const='infer')
     input_type_meg_parser.add_argument('--matrix-input', dest='input_type', action='store_const', const='matrix')
     input_type_meg_parser.add_argument('--mps-input', dest='input_type', action='store_const', const='mps')
     input_type_meg_parser.add_argument('--json-input', dest='input_type', action='store_const', const='json')
@@ -704,17 +706,52 @@ def build_arg_parser():
 
     return parser
 
+def infer_type(INPUT_FILE_PATH):
+    # First try: Using file extension:
+    file_name, file_ext = os.path.splitext(INPUT_FILE_PATH)
+    if(file_ext == '.mat'):
+        return 'matrix'
+    if(file_ext == '.json'):
+        return 'json'
+    if(file_ext == '.mps'):
+        return 'mps'
+    if(file_ext == '.lp'):
+        return 'lp'
+    
+    # Second try: Using the file contents:
+    with open(INPUT_FILE_PATH) as file:
+        for raw_line in file:
+            line = raw_line.strip()
+            if(line == ''):
+                continue
+            if(line[0] == "{"):
+                return "json"
+            if(re.search("^NAME|^\*", line.upper())):
+                return "mps"
+            if(re.search("^MIN|^MAX|^\\\\", line.upper())):
+                return "lp"
+            else:
+                return "matrix"
+
 def process_args_from_parser(args, default_arguments):
     INPUT_FILE_PATH = args.file[0]
+
+    VERBOSE_PRINT = args.verbose
 
     if(args.input_type):
         INPUT_TYPE = args.input_type
     else:
         INPUT_TYPE = default_arguments["DEFAULT_INPUT_TYPE"]
 
+    if(INPUT_TYPE == "infer"):
+        if(VERBOSE_PRINT):
+            print("Applying file type infer...")
+        INPUT_TYPE = infer_type(INPUT_FILE_PATH)
+        if(VERBOSE_PRINT):
+            print("Type inferred: " + INPUT_TYPE)
+
     PRINT_ZERO_VARS = args.zeros
     PRINT_SOLUTION_LOG = args.log
-    VERBOSE_PRINT = args.verbose
     CHECK_CLIQUE_MERGE = args.clique_merge
 
     if(args.time):
@@ -816,7 +853,7 @@ def main():
         "DEFAULT_DIGITS_ON_SOLUTION":  5,
         "DEFAULT_NUM_THREADS": 1,
         "DEFAULT_MIP_GAP": 10**(-5),
-        "DEFAULT_INPUT_TYPE": 'matrix'
+        "DEFAULT_INPUT_TYPE": 'infer'
     }
 
     # Building the argument parser:
