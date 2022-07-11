@@ -17,6 +17,8 @@ BRANCH  ||
         || 6) Add the mps-export functionality (to convert models from other input styles);
         || 
         || 7) Add the non-solve functionality (to only convert models and not to solve);
+        ||
+        || ~EXTRA~) Add the "export log file" functionality
 
               || 8) Finish the README.md file;
 DOCUMENTATION || 
@@ -29,4 +31,3 @@ BRANCH        || 9) Finish the User_Guide.pdf file;
 -> Next Stage Ideas:
     -> Add the linear solution procedure to be used (primal, dual, ...);
     -> Add the "autofill" to empty values in the matrix input;
-    -> Add the "export log file" functionality;
