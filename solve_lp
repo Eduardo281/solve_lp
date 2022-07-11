@@ -93,7 +93,7 @@ def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
 
     return status
 
-def print_OR_Tools_solution(solver: pywraplp.Solver, status: int, params: Tuple):
+def print_OR_Tools_solution(solver: pywraplp.Solver, status: int, params: Tuple) -> None:
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.variables():
@@ -221,7 +221,7 @@ def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
 
     return solver.Status
 
-def print_Gurobipy_solution(solver: gp.Model, status: int, params: Tuple):
+def print_Gurobipy_solution(solver: gp.Model, status: int, params: Tuple) -> None:
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.getVars():
@@ -353,7 +353,7 @@ def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.Optimi
 
     return status
 
-def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus, params: Tuple):
+def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus, params: Tuple) -> None:
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.vars:
@@ -386,7 +386,7 @@ def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus,
 
     return status
 
-def build_empty_parameters():
+def build_empty_parameters() -> Tuple[str, str, str, str, str, str, str]:
     leq_constraints = '*EMPTY*'
     geq_constraints = '*EMPTY*'
     bin_vars = '*EMPTY*'
@@ -395,9 +395,9 @@ def build_empty_parameters():
     ub_inputs = '*EMPTY*'
     lb_inputs = '*EMPTY*'
 
-    return obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
+    return (obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs)
 
-def process_matrix_input_data(INPUT_FILE_PATH):
+def process_matrix_input_data(params):
     c = list()
     b = list()
     A = list()
@@ -433,7 +433,7 @@ def process_matrix_input_data(INPUT_FILE_PATH):
 
     present_A_line = 0
     scanning_A_matrix = False
-    with open(INPUT_FILE_PATH) as file:
+    with open(params.INPUT_FILE_PATH) as file:
         for raw_line in file:
             line = raw_line.strip()
 
@@ -523,8 +523,8 @@ def process_matrix_input_data(INPUT_FILE_PATH):
 
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
-def process_json_input_data(INPUT_FILE_PATH):
-    with open(INPUT_FILE_PATH) as file:
+def process_json_input_data(params):
+    with open(params.INPUT_FILE_PATH) as file:
         data_json = json.load(file)
     b = np.array(data_json['b'], dtype=float)
     c = np.array(data_json['c'], dtype=float)
@@ -891,10 +891,10 @@ def main():
         # Reading the input data:
         if(params.INPUT_TYPE == 'json'):
             (c, b, A, obj_type, leq_constraints, geq_constraints, 
-            bin_vars, int_vars, lb_inputs, ub_inputs) = process_json_input_data(params.INPUT_FILE_PATH)
+            bin_vars, int_vars, lb_inputs, ub_inputs) = process_json_input_data(params)
         elif(params.INPUT_TYPE == 'matrix'):
             (c, b, A, obj_type, leq_constraints, geq_constraints, 
-            bin_vars, int_vars, lb_inputs, ub_inputs) = process_matrix_input_data(params.INPUT_FILE_PATH)    
+            bin_vars, int_vars, lb_inputs, ub_inputs) = process_matrix_input_data(params)
         else:
             raise RuntimeError('Problem with the input type!')
 
