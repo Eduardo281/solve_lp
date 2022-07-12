@@ -405,11 +405,11 @@ def process_matrix_input_data(params):
 
     # Function to read the "bin", "int", "leq" and "geq" inputs:
     def read_range_friendly_input_format(input_line):
-        if(line[-1] == '*'):
+        if(input_line[-1] == '*'):
             values = '*'
             return values
         values = list()
-        aux_vals_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
+        aux_vals_list = re.search('=([ 0-9\-\,]+)$', input_line).group(1)
         aux_vals_list = aux_vals_list.strip().split(',')
         for entry in aux_vals_list:
             if('-' in entry):
@@ -424,9 +424,9 @@ def process_matrix_input_data(params):
     # Function to read the "ub" and "lb" values
     def read_number_or_array_input_format(input_line):
         try:
-            values = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
+            values = float(re.search('=([ 0-9\.\-]+)$', input_line).group(1))
         except:
-            values = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
+            values = re.search('=([ 0-9\,\.\-]+)$', input_line).group(1)
             values = values.strip().split(',')
             values = np.array(values, dtype=float)
         return values
