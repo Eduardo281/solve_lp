@@ -852,7 +852,6 @@ def export_results_json(solver, status, params):
     variables_list = list()
     status_text = "Unknown"
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
-        print("A!")
         for var in solver.variables():
             variables_list.append({
                 "name": var.name(),
@@ -861,21 +860,58 @@ def export_results_json(solver, status, params):
                 "ub": var.ub(),
                 "value": var.solution_value()
             })
-        if(status == solver.FEASIBLE):
+        if(status == solver.ABNORMAL):
+            status_text = "Abnormal"
+        elif(status == solver.FEASIBLE):
             status_text = "Feasible"
+        elif(status == solver.INFEASIBLE):
+            status_text = "Infeasible"
+        elif(status == solver.NOT_SOLVED):
+            status_text = "Not Solved"
+        elif(status == solver.OPTIMAL):
+            status_text = "Optimal"
+        elif(status == solver.UNBOUNDED):
+            status_text = "Unbounded"
         results_json.update({
             "ObjVal": solver.Objective().Value(),
             "Runtime": solver.wall_time(),
             "Status": status_text,
             "Solver": params.SOLVER_NAME,
             "Threads": params.NUM_THREADS,
-            "GAP": params.RELATIVE_MIP_GAP_VALUE,
+            "GAP": -1.0,
             "Variables": variables_list
         })
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         print("B!")
     elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
         print("C!")
+        for var in solver.getVars():
+            variables_list.append({
+                "name": var.VarName,
+                # "type": "int" if var.Integer() else "real",
+                "lb": var.LB,
+                "ub": var.UB,
+                "value": var.X
+            })
+        if(status == gp.GRB.SUBOPTIMAL):
+            status_text = "Feasible"
+        elif(status == gp.GRB.INFEASIBLE):
+            status_text = "Infeasible"
+        elif(status == gp.GRB.LOADED):
+            status_text = "Loaded"
+        elif(status == gp.GRB.OPTIMAL):
+            status_text = "Optimal"
+        elif(status == gp.GRB.UNBOUNDED):
+            status_text = "Unbounded"
+        results_json.update({
+            "ObjVal": solver.ObjVal,
+            "Runtime": solver.Runtime,
+            "Status": status_text,
+            "Solver": params.SOLVER_NAME,
+            "Threads": params.NUM_THREADS,
+            "GAP": solver.MIPGap,
+            "Variables": variables_list
+        })
     else:
         raise RuntimeError("Problem with input modeling language!")
 
