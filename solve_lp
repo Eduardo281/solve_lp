@@ -878,11 +878,51 @@ def export_results_json(solver, status, params):
             "Status": status_text,
             "Solver": params.SOLVER_NAME,
             "Threads": params.NUM_THREADS,
-            "GAP": -1.0,
+            # "GAP": -1.0,
             "Variables": variables_list
         })
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         print("B!")
+        for var in solver.vars:
+            var_type = var.var_type
+            if(var_type == "B"):
+                var_type = "bin"
+            elif(var_type == "C"):
+                var_type = "real"
+            elif(var_type == "I"):
+                var_type = "int"
+            variables_list.append({
+                "name": var.name,
+                "type": var_type,
+                "value": var.x
+            })
+            if(var.lb > -mip.INF):
+                variables_list[-1].update({"lb": var.lb})
+            if(var.ub < 1e+300):
+                variables_list[-1].update({"ub": var.ub})
+        if(status == mip.OptimizationStatus.ERROR):
+            status_text = "Error"
+        elif(status == mip.OptimizationStatus.FEASIBLE):
+            status_text = "Feasible"
+        elif(status == mip.OptimizationStatus.INFEASIBLE):
+            status_text = "Infeasible"
+        elif(status == mip.OptimizationStatus.LOADED):
+            status_text = "Not Solved"
+        elif(status == mip.OptimizationStatus.OPTIMAL):
+            status_text = "Optimal"
+        elif(status == mip.OptimizationStatus.UNBOUNDED):
+            status_text = "Unbounded"
+        results_json.update({
+            "ObjVal": solver.objective_value,
+            # "Runtime": solver.wall_time(),
+            "Status": status_text,
+            "Solver": params.SOLVER_NAME,
+            "Threads": params.NUM_THREADS,
+            "Problem Type": "Unknown"
+        })
+        if(solver.gap < float("inf")):
+            results_json.update({"GAP": solver.gap})
+        results_json.update({"Variables": variables_list})
     elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
         print("C!")
         for var in solver.getVars():
