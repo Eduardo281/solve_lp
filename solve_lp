@@ -847,6 +847,41 @@ def process_args_from_parser(args, default_arguments):
 
     return params
 
+def export_results_json(solver, status, params):
+    results_json = dict()
+    variables_list = list()
+    status_text = "Unknown"
+    if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
+        print("A!")
+        for var in solver.variables():
+            variables_list.append({
+                "name": var.name(),
+                "type": "int" if var.Integer() else "real",
+                "lb": var.lb(),
+                "ub": var.ub(),
+                "value": var.solution_value()
+            })
+        if(status == solver.FEASIBLE):
+            status_text = "Feasible"
+        results_json.update({
+            "ObjVal": solver.Objective().Value(),
+            "Runtime": solver.wall_time(),
+            "Status": status_text,
+            "Solver": params.SOLVER_NAME,
+            "Threads": params.NUM_THREADS,
+            "GAP": params.RELATIVE_MIP_GAP_VALUE,
+            "Variables": variables_list
+        })
+    elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        print("B!")
+    elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
+        print("C!")
+    else:
+        raise RuntimeError("Problem with input modeling language!")
+
+    json.dump(results_json, open("DELETE_ME.json", "w"))
+    return 
+
 def main():
     # Default solve_lp parameters:
     default_arguments = {
@@ -971,6 +1006,8 @@ def main():
         if(params.MODELING_LANGUAGE_NAME == 'GUROBIPY'):
             status = solve_Gurobipy_model(solver, params)
             print_Gurobipy_solution(solver, status, params)
+
+    export_results_json(solver, status, params)
 
     print('END OF FILE!')
 
