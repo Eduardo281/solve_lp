@@ -852,14 +852,17 @@ def export_results_json(solver, status, params):
     variables_list = list()
     status_text = "Unknown"
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
+        GAP_value = abs((solver.Objective().BestBound() - solver.Objective().Value()))/(1e-10 + abs(solver.Objective().Value()))
         for var in solver.variables():
             variables_list.append({
                 "name": var.name(),
                 "type": "int" if var.Integer() else "real",
-                "lb": var.lb(),
-                "ub": var.ub(),
                 "value": var.solution_value()
             })
+            if(var.lb() > -float("inf")):
+                variables_list[-1].update({"lb": var.lb()})
+            if(var.ub() < float("inf")):
+                variables_list[-1].update({"ub": var.ub()})
         if(status == solver.ABNORMAL):
             status_text = "Abnormal"
         elif(status == solver.FEASIBLE):
@@ -878,7 +881,7 @@ def export_results_json(solver, status, params):
             "Status": status_text,
             "Solver": params.SOLVER_NAME,
             "Threads": params.NUM_THREADS,
-            # "GAP": -1.0,
+            "GAP": GAP_value,
             "Variables": variables_list
         })
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
