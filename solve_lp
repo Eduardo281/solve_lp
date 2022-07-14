@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-from typing import Tuple
 from ortools.linear_solver import pywraplp
 import mip
 import gurobipy as gp
@@ -11,6 +10,10 @@ import os
 import re
 import json
 from collections import namedtuple
+
+from functools import reduce
+import operator
+from typing import Tuple
 
 import argparse
 
@@ -851,13 +854,15 @@ def export_results_json(solver, status, params):
     results_json = dict()
     variables_list = list()
     status_text = "Unknown"
+    DIGITS_TO_ROUND = 10
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         GAP_value = abs((solver.Objective().BestBound() - solver.Objective().Value()))/(1e-10 + abs(solver.Objective().Value()))
+        problemHaveIntVars = reduce(operator.or_, [var.Integer() for var in solver.variables()])
         for var in solver.variables():
             variables_list.append({
                 "name": var.name(),
                 "type": "int" if var.Integer() else "real",
-                "value": var.solution_value()
+                "value": round(var.solution_value(), DIGITS_TO_ROUND)
             })
             if(var.lb() > -float("inf")):
                 variables_list[-1].update({"lb": var.lb()})
@@ -876,14 +881,17 @@ def export_results_json(solver, status, params):
         elif(status == solver.UNBOUNDED):
             status_text = "Unbounded"
         results_json.update({
-            "ObjVal": solver.Objective().Value(),
+            "ObjVal": round(solver.Objective().Value(), DIGITS_TO_ROUND),
             "Runtime": solver.wall_time(),
             "Status": status_text,
             "Solver": params.SOLVER_NAME,
             "Threads": params.NUM_THREADS,
-            "GAP": GAP_value,
-            "Variables": variables_list
         })
+        if(problemHaveIntVars):
+            results_json.update({"GAP": GAP_value})
+            results_json.update({"Nodes": solver.nodes()})
+        results_json.update({"Iterations": solver.iterations()})
+        results_json.update({"Variables": variables_list})
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         print("B!")
         for var in solver.vars:
@@ -897,7 +905,7 @@ def export_results_json(solver, status, params):
             variables_list.append({
                 "name": var.name,
                 "type": var_type,
-                "value": var.x
+                "value": round(var.x, DIGITS_TO_ROUND)
             })
             if(var.lb > -mip.INF):
                 variables_list[-1].update({"lb": var.lb})
@@ -916,7 +924,7 @@ def export_results_json(solver, status, params):
         elif(status == mip.OptimizationStatus.UNBOUNDED):
             status_text = "Unbounded"
         results_json.update({
-            "ObjVal": solver.objective_value,
+            "ObjVal": round(solver.objective_value, DIGITS_TO_ROUND),
             # "Runtime": solver.wall_time(),
             "Status": status_text,
             "Solver": params.SOLVER_NAME,
@@ -934,7 +942,7 @@ def export_results_json(solver, status, params):
                 # "type": "int" if var.Integer() else "real",
                 "lb": var.LB,
                 "ub": var.UB,
-                "value": var.X
+                "value": round(var.X, DIGITS_TO_ROUND)
             })
         if(status == gp.GRB.SUBOPTIMAL):
             status_text = "Feasible"
@@ -947,7 +955,7 @@ def export_results_json(solver, status, params):
         elif(status == gp.GRB.UNBOUNDED):
             status_text = "Unbounded"
         results_json.update({
-            "ObjVal": solver.ObjVal,
+            "ObjVal": round(solver.ObjVal, DIGITS_TO_ROUND),
             "Runtime": solver.Runtime,
             "Status": status_text,
             "Solver": params.SOLVER_NAME,
