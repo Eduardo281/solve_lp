@@ -857,7 +857,7 @@ def export_results_json(solver, status, params):
     DIGITS_TO_ROUND = 10
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         GAP_value = abs((solver.Objective().BestBound() - solver.Objective().Value()))/(1e-10 + abs(solver.Objective().Value()))
-        problemHaveIntVars = reduce(operator.or_, [var.Integer() for var in solver.variables()])
+        problemHaveIntVars = (True in [var.Integer() for var in solver.variables()])
         for var in solver.variables():
             variables_list.append({
                 "name": var.name(),
