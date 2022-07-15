@@ -11,8 +11,6 @@ import re
 import json
 from collections import namedtuple
 
-from functools import reduce
-import operator
 from typing import Tuple
 
 import argparse
@@ -905,14 +903,9 @@ def export_results_json(solver, status, params):
         results_json.update({"Variables": variables_list})
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         print("B!")
+        var_type_dict = {"B": "bin", "C": "real", "I": "int"}
         for var in solver.vars:
-            var_type = var.var_type
-            if(var_type == "B"):
-                var_type = "bin"
-            elif(var_type == "C"):
-                var_type = "real"
-            elif(var_type == "I"):
-                var_type = "int"
+            var_type = var_type_dict[var.var_type]
             variables_list.append({
                 "name": var.name,
                 "type": var_type,
@@ -936,14 +929,15 @@ def export_results_json(solver, status, params):
             status_text = "Unbounded"
         results_json.update({
             "ObjVal": round(solver.objective_value, DIGITS_TO_ROUND),
-            # "Runtime": solver.wall_time(),
+            "Runtime": "Unknown",
             "Status": status_text,
+            "Type": problem_type,
             "Solver": params.SOLVER_NAME,
-            "Threads": params.NUM_THREADS,
-            "Problem Type": "Unknown"
+            "Threads": params.NUM_THREADS
         })
         if(solver.gap < float("inf")):
             results_json.update({"GAP": solver.gap})
+            results_json.update({"Nodes": "Unknown"})
         results_json.update({"Variables": variables_list})
     elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
         print("C!")
@@ -969,6 +963,7 @@ def export_results_json(solver, status, params):
             "ObjVal": round(solver.ObjVal, DIGITS_TO_ROUND),
             "Runtime": solver.Runtime,
             "Status": status_text,
+            "Type": problem_type,
             "Solver": params.SOLVER_NAME,
             "Threads": params.NUM_THREADS,
             "GAP": solver.MIPGap,
