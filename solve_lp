@@ -854,10 +854,20 @@ def export_results_json(solver, status, params):
     results_json = dict()
     variables_list = list()
     status_text = "Unknown"
+    problem_type = "Unknown"
     DIGITS_TO_ROUND = 10
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         GAP_value = abs((solver.Objective().BestBound() - solver.Objective().Value()))/(1e-10 + abs(solver.Objective().Value()))
-        problemHaveIntVars = (True in [var.Integer() for var in solver.variables()])
+        int_vars_bool_list = [var.Integer() for var in solver.variables()]
+        problemHaveIntVars = (True in int_vars_bool_list)
+        problemHaveRealVars = (False in int_vars_bool_list)
+        if(problemHaveIntVars):
+            if(problemHaveRealVars):
+                problem_type = "MILP"
+            else:
+                problem_type = "IP"
+        elif(problemHaveRealVars):
+            problem_type = "LP"
         for var in solver.variables():
             variables_list.append({
                 "name": var.name(),
@@ -884,6 +894,7 @@ def export_results_json(solver, status, params):
             "ObjVal": round(solver.Objective().Value(), DIGITS_TO_ROUND),
             "Runtime": solver.wall_time(),
             "Status": status_text,
+            "Type": problem_type,
             "Solver": params.SOLVER_NAME,
             "Threads": params.NUM_THREADS,
         })
