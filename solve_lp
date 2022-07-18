@@ -866,16 +866,13 @@ def export_results_json(solver, status, params):
                 problem_type = "IP"
         elif(problemHaveRealVars):
             problem_type = "LP"
-        for var in solver.variables():
-            variables_list.append({
+        variables_list = [{
                 "name": var.name(),
                 "type": "int" if var.Integer() else "real",
-                "value": round(var.solution_value(), DIGITS_TO_ROUND)
-            })
-            if(var.lb() > -float("inf")):
-                variables_list[-1].update({"lb": var.lb()})
-            if(var.ub() < float("inf")):
-                variables_list[-1].update({"ub": var.ub()})
+                "value": round(var.solution_value(), DIGITS_TO_ROUND),
+                "lb" : var.lb() if var.lb() > -float("inf") else None,
+                "ub" : var.ub() if var.ub() < float("inf") else None
+            } for var in solver.variables()]
         if(status == solver.ABNORMAL):
             status_text = "Abnormal"
         elif(status == solver.FEASIBLE):
