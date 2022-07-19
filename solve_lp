@@ -9,11 +9,14 @@ import sys
 import os
 import re
 import json
+import time
 from collections import namedtuple
 
 from typing import Tuple
 
 import argparse
+
+g_runtime = 0
 
 def build_OR_Tools_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
 var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
@@ -80,6 +83,7 @@ params: Tuple) -> Tuple[pywraplp.Solver, dict, pywraplp.Objective, dict]:
 
 def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
     # Solving the problem and printing results:
+    global g_runtime
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.set_time_limit(params.TOTAL_SOLVING_TIME * 1000)
     if(params.PRINT_SOLUTION_LOG):
@@ -88,9 +92,13 @@ def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
     if(params.RELATIVE_MIP_GAP_VALUE > 0):
         solverParams = pywraplp.MPSolverParameters()
         solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, params.RELATIVE_MIP_GAP_VALUE)
+        solving_start_time = time.time()
         status = solver.Solve(solverParams)
+        g_runtime = time.time() - solving_start_time
     else:
+        solving_start_time = time.time()
         status = solver.Solve()
+        g_runtime = time.time() - solving_start_time
 
     return status
 
@@ -207,6 +215,7 @@ params: Tuple) -> Tuple[gp.Model, dict, None, dict]:
 
 def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
     # Solving the problem and printing results:
+    global g_runtime
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.setParam('TimeLimit', params.TOTAL_SOLVING_TIME)
     if(params.PRINT_SOLUTION_LOG):
@@ -218,7 +227,9 @@ def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
         solver.setParam('MIPGap', params.RELATIVE_MIP_GAP_VALUE)
     if(params.NODEFILE_START_SIZE):
         solver.setParam("NodefileStart", params.NODEFILE_START_SIZE)
+    solving_start_time = time.time()
     solver.optimize()
+    g_runtime = time.time() - solving_start_time
 
     return solver.Status
 
@@ -339,6 +350,7 @@ params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
 
 def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.OptimizationStatus:
     # Solving the problem and printing results:
+    global g_runtime
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.max_seconds = params.TOTAL_SOLVING_TIME
     if(params.PRINT_SOLUTION_LOG):
@@ -350,8 +362,10 @@ def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.Optimi
     solver.threads = params.NUM_THREADS
     if(params.RELATIVE_MIP_GAP_VALUE > 0):
         solver.max_mip_gap = params.RELATIVE_MIP_GAP_VALUE
+    solving_start_time = time.time()
     status = solver.optimize()
-
+    g_runtime = time.time() - solving_start_time
+    
     return status
 
 def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus, params: Tuple) -> None:
@@ -888,7 +902,7 @@ def export_results_json(solver, status, params):
             status_text = "Unbounded"
         results_json.update({
             "ObjVal": round(solver.Objective().Value(), DIGITS_TO_ROUND),
-            "Runtime": solver.wall_time(),
+            "Runtime": g_runtime,
             "Status": status_text,
             "Type": problem_type,
             "Solver": params.SOLVER_NAME,
@@ -928,7 +942,7 @@ def export_results_json(solver, status, params):
             status_text = "Unbounded"
         results_json.update({
             "ObjVal": round(solver.objective_value, DIGITS_TO_ROUND),
-            "Runtime": "Unknown",
+            "Runtime": g_runtime,
             "Status": status_text,
             "Type": problem_type,
             "Solver": params.SOLVER_NAME,
@@ -965,7 +979,7 @@ def export_results_json(solver, status, params):
             status_text = "Unbounded"
         results_json.update({
             "ObjVal": round(solver.ObjVal, DIGITS_TO_ROUND),
-            "Runtime": solver.Runtime,
+            "Runtime": g_runtime,
             "Status": status_text,
             "Type": problem_type,
             "Solver": params.SOLVER_NAME,
