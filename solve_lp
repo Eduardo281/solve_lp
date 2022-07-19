@@ -912,7 +912,7 @@ def export_results_json(solver, status, params):
             "value": round(var.x, DIGITS_TO_ROUND),
             "lb" : var.lb if var.lb > -1e+300 else None,
             "ub" : var.ub if var.ub < 1e+300 else None
-            } for var in solver.variables()
+            } for var in solver.vars
         ]
         if(status == mip.OptimizationStatus.ERROR):
             status_text = "Error"
