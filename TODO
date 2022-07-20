@@ -20,11 +20,13 @@ BRANCH  ||
         ||
         || ~EXTRA~) Add the "export log file" functionality
 
-              || 8) Finish the README.md file;
-DOCUMENTATION || 
-BRANCH        || 9) Finish the User_Guide.pdf file;
+              || 8) Finish to add the comments inside the functions
               || 
-              || 10) Finish the index.html file;
+              || 9) Finish the README.md file;
+DOCUMENTATION || 
+BRANCH        || 10) Finish the User_Guide.pdf file;
+              || 
+              || 11) Finish the index.html file;
 
 *** Finally: Change the repository to public instead of private. ***
 
