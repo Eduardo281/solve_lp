@@ -83,7 +83,7 @@ params: Tuple) -> Tuple[pywraplp.Solver, dict, pywraplp.Objective, dict]:
     return solver, x, obj, cstr
 
 def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
-    # Solving the problem and printing results:
+    # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.set_time_limit(params.TOTAL_SOLVING_TIME * 1000)
@@ -215,7 +215,7 @@ params: Tuple) -> Tuple[gp.Model, dict, None, dict]:
     return solver, x, obj, cstr
 
 def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
-    # Solving the problem and printing results:
+    # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.setParam('TimeLimit', params.TOTAL_SOLVING_TIME)
@@ -350,7 +350,7 @@ params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
     return solver, x, obj, cstr
 
 def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.OptimizationStatus:
-    # Solving the problem and printing results:
+    # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.max_seconds = params.TOTAL_SOLVING_TIME
