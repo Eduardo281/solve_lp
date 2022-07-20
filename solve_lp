@@ -1,20 +1,21 @@
 #!/usr/bin/python3
 
-from ortools.linear_solver import pywraplp
 import mip
 import gurobipy as gp
 
-import numpy as np
-import sys
+from ortools.linear_solver import pywraplp
+
 import os
 import re
+import sys
 import json
 import time
-from collections import namedtuple
+import argparse
 
 from typing import Tuple
+from collections import namedtuple
 
-import argparse
+import numpy as np
 
 g_runtime = 0
 
@@ -871,14 +872,14 @@ def export_results_json(solver, status, params):
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         GAP_value = abs((solver.Objective().BestBound() - solver.Objective().Value()))/(1e-10 + abs(solver.Objective().Value()))
         int_vars_bool_list = [var.Integer() for var in solver.variables()]
-        problemHaveIntVars = (True in int_vars_bool_list)
-        problemHaveRealVars = (False in int_vars_bool_list)
-        if(problemHaveIntVars):
-            if(problemHaveRealVars):
+        problem_has_int_vars = (True in int_vars_bool_list)
+        problem_has_real_vars = (False in int_vars_bool_list)
+        if(problem_has_int_vars):
+            if(problem_has_real_vars):
                 problem_type = "MILP"
             else:
                 problem_type = "IP"
-        elif(problemHaveRealVars):
+        elif(problem_has_real_vars):
             problem_type = "LP"
         variables_list = [{
             "name": var.name(),
@@ -908,7 +909,7 @@ def export_results_json(solver, status, params):
             "Solver": params.SOLVER_NAME,
             "Threads": params.NUM_THREADS,
         })
-        if(problemHaveIntVars):
+        if(problem_has_int_vars):
             results_json.update({
                 "GAP": GAP_value,
                 "Nodes": solver.nodes()
@@ -919,6 +920,21 @@ def export_results_json(solver, status, params):
         })
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         var_type_dict = {"B": "bin", "C": "real", "I": "int"}
+        bool_vars_bool_list = [(var_type_dict[var.var_type] == "bin")  for var in solver.vars]
+        int_vars_bool_list = [(var_type_dict[var.var_type] == "int")  for var in solver.vars]
+        real_vars_bool_list = [(var_type_dict[var.var_type] == "real")  for var in solver.vars]
+        problem_has_bool_vars = (True in bool_vars_bool_list)
+        problem_has_int_vars = (True in int_vars_bool_list)
+        problem_has_real_vars = (True in real_vars_bool_list)
+        if(problem_has_real_vars):
+            if(problem_has_int_vars or problem_has_bool_vars):
+                problem_type = "MILP"
+            else:
+                problem_type = "LP"
+        elif(problem_has_bool_vars and (not problem_has_int_vars)):
+            problem_type = "BP"
+        else:
+            problem_type = "IP"
         variables_list = [{
             "name": var.name,
             "type": var_type_dict[var.var_type],
