@@ -881,6 +881,10 @@ def export_results_json(solver, status, params):
                 problem_type = "IP"
         elif(problem_has_real_vars):
             problem_type = "LP"
+        if(problem_type == "IP"):
+            if(len([var for var in solver.variables() if var.lb() == 0]) == len(solver.variables())):
+                if(len([var for var in solver.variables() if var.ub() == 1]) == len(solver.variables())):
+                    problem_type = "BP"
         variables_list = [{
             "name": var.name(),
             "type": "int" if var.Integer() else "real",
