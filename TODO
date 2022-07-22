@@ -8,13 +8,15 @@ BRANCH  ||
         ||     -> First criteria: Input file extension [OK!];
         ||     -> Second criteria: Try-and-error reading the data [OK!];
         || 
-        || ~EXTRA~) Add type hints to the functions [PARTIAL!]
+        || ~EXTRA~) Add type hints to the functions [[[PARTIAL!]]]
 
-        || 4) Define how a json-output file would looks like;
+        || 4) Define how a json-output file would looks like [OK!]
         || 
-EXPORT  || 5) Add the json-export functionality;
+EXPORT  || 5) Add the json-export functionality [OK!]
 BRANCH  || 
-        || 6) Add the mps-export functionality (to convert models from other input styles);
+        || 6.1) Add the mps-export functionality (to convert models from other input styles);
+        ||
+        || 6.2) Add the lp-export functionality (to convert models from other input styles);
         || 
         || 7) Add the non-solve functionality (to only convert models and not to solve);
         ||
