@@ -977,9 +977,25 @@ def export_results_json(solver, status, params):
             "Variables": variables_list
         })
     elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
+        var_type_dict = {"B": "bin", "C": "real", "I": "int"}
+        bool_vars_bool_list = [(var_type_dict[var.VType] == "bin")  for var in solver.getVars()]
+        int_vars_bool_list = [(var_type_dict[var.VType] == "int")  for var in solver.getVars()]
+        real_vars_bool_list = [(var_type_dict[var.VType] == "real")  for var in solver.getVars()]
+        problem_has_bool_vars = (True in bool_vars_bool_list)
+        problem_has_int_vars = (True in int_vars_bool_list)
+        problem_has_real_vars = (True in real_vars_bool_list)
+        if(problem_has_real_vars):
+            if(problem_has_int_vars or problem_has_bool_vars):
+                problem_type = "MILP"
+            else:
+                problem_type = "LP"
+        elif(problem_has_bool_vars and (not problem_has_int_vars)):
+            problem_type = "BP"
+        else:
+            problem_type = "IP"
         variables_list = [{
             "name": var.VarName,
-            "type": "Unknown",
+            "type": var_type_dict[var.VType],
             "value": round(var.X, DIGITS_TO_ROUND),
             "lb": var.LB if var.LB > -float("inf") else None,
             "ub": var.UB if var.UB < float("inf") else None
