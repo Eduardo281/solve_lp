@@ -970,10 +970,10 @@ def export_results_json(solver, status, params):
         if(solver.gap < float("inf")):
             results_json.update({
                 "GAP": solver.gap,
-                "Nodes": "Unknown"
+                #"Nodes": "Unknown"
             })
         results_json.update({
-            "Iterations": -1,
+            #"Iterations": -1,
             "Variables": variables_list
         })
     elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
