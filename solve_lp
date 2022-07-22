@@ -696,6 +696,10 @@ def build_arg_parser():
     parser.add_argument('-m', '--modeling-language', nargs=1, metavar='MODELING_LANGUAGE', type=str,
         default=None, dest='modeling_language', 
         help = 'Which modeling language to use. Available: GUROBIPY, OR-TOOLS and PYTHON-MIP.')
+
+    parser.add_argument('--export-solution-json', nargs = 1, metavar='JSON_FILEPATH', type=str,
+        dest='exporting_json_filepath', default=None, help = '(only available on gurobipy)')
+
     parser.add_argument('--help-with-solvers', action='store_true', default=None, 
         dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
 
@@ -837,11 +841,18 @@ def process_args_from_parser(args, default_arguments):
     else:
         NODEFILE_START_SIZE = None
 
+    if(args.exporting_json_filepath):
+        EXPORT_SOLUTION_JSON = True
+        SOLUTION_JSON_PATH = args.exporting_json_filepath[0]
+    else:
+        EXPORT_SOLUTION_JSON = False
+        SOLUTION_JSON_PATH = None
+
     parametersTuple = namedtuple('parametersTuple', [
         "INPUT_FILE_PATH", "INPUT_TYPE", "PRINT_ZERO_VARS", "PRINT_SOLUTION_LOG",
         "VERBOSE_PRINT", "CHECK_CLIQUE_MERGE", "TOTAL_SOLVING_TIME", "DIGITS_ON_SOLUTION",
         "MODELING_LANGUAGE_NAME", "SOLVER_NAME", "NUM_THREADS", "RELATIVE_MIP_GAP_VALUE",
-        "MEMORY_LIMIT", "NODEFILE_START_SIZE"
+        "MEMORY_LIMIT", "NODEFILE_START_SIZE", "EXPORT_SOLUTION_JSON", "SOLUTION_JSON_PATH"
     ])
 
     params = parametersTuple(
@@ -858,7 +869,9 @@ def process_args_from_parser(args, default_arguments):
         NUM_THREADS,
         RELATIVE_MIP_GAP_VALUE,
         MEMORY_LIMIT,
-        NODEFILE_START_SIZE
+        NODEFILE_START_SIZE,
+        EXPORT_SOLUTION_JSON,
+        SOLUTION_JSON_PATH
     )
 
     return params
@@ -1033,7 +1046,7 @@ def export_results_json(solver, status, params):
     else:
         raise RuntimeError("Problem with input modeling language!")
 
-    json.dump(results_json, open("DELETE_ME.json", "w"))
+    json.dump(results_json, open(params.SOLUTION_JSON_PATH, "w"))
     return 
 
 def main():
@@ -1161,7 +1174,8 @@ def main():
             status = solve_Gurobipy_model(solver, params)
             print_Gurobipy_solution(solver, status, params)
 
-    export_results_json(solver, status, params)
+    if(params.EXPORT_SOLUTION_JSON):
+        export_results_json(solver, status, params)
 
     print('END OF FILE!')
 
