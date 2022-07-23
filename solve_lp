@@ -698,7 +698,7 @@ def build_arg_parser():
         help = 'Which modeling language to use. Available: GUROBIPY, OR-TOOLS and PYTHON-MIP.')
 
     parser.add_argument('--export-solution-json', nargs = 1, metavar='JSON_FILEPATH', type=str,
-        dest='exporting_json_filepath', default=None, help = '(only available on gurobipy)')
+        dest='exporting_json_filepath', default=None, help = 'To export the results in a .json file.')
 
     parser.add_argument('--help-with-solvers', action='store_true', default=None, 
         dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
