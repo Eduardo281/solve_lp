@@ -699,6 +699,10 @@ def build_arg_parser():
 
     parser.add_argument('--export-solution-json', nargs = 1, metavar='JSON_FILEPATH', type=str,
         dest='exporting_json_filepath', default=None, help = 'To export the results in a .json file.')
+    parser.add_argument('--export-mps-model', nargs = 1, metavar='MPS_FILEPATH', type=str,
+        dest='exporting_mps_filepath', default=None, help = 'To export the model in a .mps file.')
+    parser.add_argument('--export-lp-model', nargs = 1, metavar='LP_FILEPATH', type=str,
+        dest='exporting_lp_filepath', default=None, help = 'To export the model in a .lp file.')
 
     parser.add_argument('--help-with-solvers', action='store_true', default=None, 
         dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
@@ -848,11 +852,26 @@ def process_args_from_parser(args, default_arguments):
         EXPORT_SOLUTION_JSON = False
         SOLUTION_JSON_PATH = None
 
+    if(args.exporting_mps_filepath):
+        EXPORT_MPS_FILE = True
+        MODEL_MPS_EXPORTING_PATH = args.exporting_mps_filepath[0]
+    else:
+        EXPORT_MPS_FILE = False
+        MODEL_MPS_EXPORTING_PATH = None
+
+    if(args.exporting_lp_filepath):
+        EXPORT_LP_FILE = True
+        MODEL_LP_EXPORTING_PATH = args.exporting_lp_filepath[0]
+    else:
+        EXPORT_LP_FILE = False
+        MODEL_LP_EXPORTING_PATH = None
+
     parametersTuple = namedtuple('parametersTuple', [
         "INPUT_FILE_PATH", "INPUT_TYPE", "PRINT_ZERO_VARS", "PRINT_SOLUTION_LOG",
         "VERBOSE_PRINT", "CHECK_CLIQUE_MERGE", "TOTAL_SOLVING_TIME", "DIGITS_ON_SOLUTION",
         "MODELING_LANGUAGE_NAME", "SOLVER_NAME", "NUM_THREADS", "RELATIVE_MIP_GAP_VALUE",
-        "MEMORY_LIMIT", "NODEFILE_START_SIZE", "EXPORT_SOLUTION_JSON", "SOLUTION_JSON_PATH"
+        "MEMORY_LIMIT", "NODEFILE_START_SIZE", "EXPORT_SOLUTION_JSON", "SOLUTION_JSON_PATH",
+        "EXPORT_MPS_FILE", "MODEL_MPS_EXPORTING_PATH", "EXPORT_LP_FILE", "MODEL_LP_EXPORTING_PATH"
     ])
 
     params = parametersTuple(
@@ -871,7 +890,11 @@ def process_args_from_parser(args, default_arguments):
         MEMORY_LIMIT,
         NODEFILE_START_SIZE,
         EXPORT_SOLUTION_JSON,
-        SOLUTION_JSON_PATH
+        SOLUTION_JSON_PATH,
+        EXPORT_MPS_FILE,
+        MODEL_MPS_EXPORTING_PATH,
+        EXPORT_LP_FILE,
+        MODEL_LP_EXPORTING_PATH
     )
 
     return params
@@ -1049,6 +1072,15 @@ def export_results_json(solver, status, params):
     json.dump(results_json, open(params.SOLUTION_JSON_PATH, "w"))
     return 
 
+def export_mps_model(solver, params):
+    if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
+        with open(params.MODEL_MPS_EXPORTING_PATH, "w") as file:
+            file.write(solver.ExportModelAsMpsFormat(False, False))
+        return
+
+def export_lp_model(solver, params):
+    pass
+
 def main():
     # Default solve_lp parameters:
     default_arguments = {
@@ -1176,6 +1208,12 @@ def main():
 
     if(params.EXPORT_SOLUTION_JSON):
         export_results_json(solver, status, params)
+
+    if(params.EXPORT_MPS_FILE):
+        export_mps_model(solver, params)
+
+    if(params.EXPORT_LP_FILE):
+        export_lp_model(solver, params)
 
     print('END OF FILE!')
 
