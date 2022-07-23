@@ -1079,7 +1079,10 @@ def export_mps_model(solver, params):
         return
 
 def export_lp_model(solver, params):
-    pass
+    if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
+        with open(params.MODEL_LP_EXPORTING_PATH, "w") as file:
+            file.write(solver.ExportModelAsLpFormat(False))
+        return
 
 def main():
     # Default solve_lp parameters:
