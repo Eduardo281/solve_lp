@@ -14,9 +14,9 @@ BRANCH  ||
         || 
 EXPORT  || 5) Add the json-export functionality [OK!]
 BRANCH  || 
-        || 6.1) Add the mps-export functionality (to convert models from other input styles);
+        || 6.1) Add the mps-export functionality (to convert models from other input styles) [OK!];
         ||
-        || 6.2) Add the lp-export functionality (to convert models from other input styles);
+        || 6.2) Add the lp-export functionality (to convert models from other input styles) [OK!];
         || 
         || 7) Add the non-solve functionality (to only convert models and not to solve);
         ||
