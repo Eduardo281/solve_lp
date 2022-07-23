@@ -1076,17 +1076,19 @@ def export_mps_model(solver, params):
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         with open(params.MODEL_MPS_EXPORTING_PATH, "w") as file:
             file.write(solver.ExportModelAsMpsFormat(False, False))
-        return
+    elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        solver.write(params.MODEL_MPS_EXPORTING_PATH)
     else:
-        raise RuntimeError("Can only export .mps files when using Or-Tools modeling language!")
+        raise RuntimeError("Problem exporting .mps file!")
 
 def export_lp_model(solver, params):
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         with open(params.MODEL_LP_EXPORTING_PATH, "w") as file:
             file.write(solver.ExportModelAsLpFormat(False))
-        return
+    elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        solver.write(params.MODEL_LP_EXPORTING_PATH)
     else:
-        raise RuntimeError("Can only export .lp files when using Or-Tools modeling language!")
+        raise RuntimeError("Problem exporting .lp file!")
 
 def main():
     # Default solve_lp parameters:
