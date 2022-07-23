@@ -1078,6 +1078,8 @@ def export_mps_model(solver, params):
             file.write(solver.ExportModelAsMpsFormat(False, False))
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         solver.write(params.MODEL_MPS_EXPORTING_PATH)
+    elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
+        solver.write(params.MODEL_MPS_EXPORTING_PATH)
     else:
         raise RuntimeError("Problem exporting .mps file!")
 
@@ -1086,6 +1088,8 @@ def export_lp_model(solver, params):
         with open(params.MODEL_LP_EXPORTING_PATH, "w") as file:
             file.write(solver.ExportModelAsLpFormat(False))
     elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        solver.write(params.MODEL_LP_EXPORTING_PATH)
+    elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
         solver.write(params.MODEL_LP_EXPORTING_PATH)
     else:
         raise RuntimeError("Problem exporting .lp file!")
