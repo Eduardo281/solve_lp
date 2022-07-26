@@ -85,6 +85,8 @@ params: Tuple) -> Tuple[pywraplp.Solver, dict, pywraplp.Objective, dict]:
 def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
     # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
+    if(params.EXPORTING_LOGFILE_PATH):
+        pass #TODO
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.set_time_limit(params.TOTAL_SOLVING_TIME * 1000)
     if(params.PRINT_SOLUTION_LOG):
@@ -95,11 +97,10 @@ def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
         solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, params.RELATIVE_MIP_GAP_VALUE)
         solving_start_time = time.time()
         status = solver.Solve(solverParams)
-        g_runtime = time.time() - solving_start_time
     else:
         solving_start_time = time.time()
         status = solver.Solve()
-        g_runtime = time.time() - solving_start_time
+    g_runtime = time.time() - solving_start_time
 
     return status
 
@@ -217,6 +218,8 @@ params: Tuple) -> Tuple[gp.Model, dict, None, dict]:
 def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
     # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
+    if(params.EXPORTING_LOGFILE_PATH):
+        pass #TODO
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.setParam('TimeLimit', params.TOTAL_SOLVING_TIME)
     if(params.PRINT_SOLUTION_LOG):
@@ -352,6 +355,8 @@ params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
 def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.OptimizationStatus:
     # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
+    if(params.EXPORTING_LOGFILE_PATH):
+        pass #TODO
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.max_seconds = params.TOTAL_SOLVING_TIME
     if(params.PRINT_SOLUTION_LOG):
@@ -703,6 +708,8 @@ def build_arg_parser():
         dest='exporting_mps_filepath', default=None, help = 'To export the model in a .mps file.')
     parser.add_argument('--export-lp-model', nargs = 1, metavar='LP_FILEPATH', type=str,
         dest='exporting_lp_filepath', default=None, help = 'To export the model in a .lp file.')
+    parser.add_argument('--export-logfile', nargs = 1, metavar='LOGFILE_PATH', type=str,
+        dest='exporting_logfile_path', default=None, help = 'To export the solver log into a file.')
 
     parser.add_argument('--help-with-solvers', action='store_true', default=None, 
         dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
@@ -866,12 +873,19 @@ def process_args_from_parser(args, default_arguments):
         EXPORT_LP_FILE = False
         MODEL_LP_EXPORTING_PATH = None
 
+    if(args.exporting_logfile_path):
+        PRINT_SOLUTION_LOG = True
+        EXPORTING_LOGFILE_PATH = args.exporting_logfile_path[0]
+    else:
+        EXPORTING_LOGFILE_PATH = None
+
     parametersTuple = namedtuple('parametersTuple', [
         "INPUT_FILE_PATH", "INPUT_TYPE", "PRINT_ZERO_VARS", "PRINT_SOLUTION_LOG",
         "VERBOSE_PRINT", "CHECK_CLIQUE_MERGE", "TOTAL_SOLVING_TIME", "DIGITS_ON_SOLUTION",
         "MODELING_LANGUAGE_NAME", "SOLVER_NAME", "NUM_THREADS", "RELATIVE_MIP_GAP_VALUE",
         "MEMORY_LIMIT", "NODEFILE_START_SIZE", "EXPORT_SOLUTION_JSON", "SOLUTION_JSON_PATH",
-        "EXPORT_MPS_FILE", "MODEL_MPS_EXPORTING_PATH", "EXPORT_LP_FILE", "MODEL_LP_EXPORTING_PATH"
+        "EXPORT_MPS_FILE", "MODEL_MPS_EXPORTING_PATH", "EXPORT_LP_FILE", "MODEL_LP_EXPORTING_PATH",
+        "EXPORTING_LOGFILE_PATH"
     ])
 
     params = parametersTuple(
@@ -894,7 +908,8 @@ def process_args_from_parser(args, default_arguments):
         EXPORT_MPS_FILE,
         MODEL_MPS_EXPORTING_PATH,
         EXPORT_LP_FILE,
-        MODEL_LP_EXPORTING_PATH
+        MODEL_LP_EXPORTING_PATH,
+        EXPORTING_LOGFILE_PATH
     )
 
     return params
