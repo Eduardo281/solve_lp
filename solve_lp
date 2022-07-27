@@ -219,7 +219,7 @@ def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
     # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
     if(params.EXPORTING_LOGFILE_PATH):
-        pass #TODO
+        solver.setParam("LogFile", params.EXPORTING_LOGFILE_PATH)
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.setParam('TimeLimit', params.TOTAL_SOLVING_TIME)
     if(params.PRINT_SOLUTION_LOG):
