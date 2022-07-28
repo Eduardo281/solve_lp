@@ -20,7 +20,7 @@ BRANCH  ||
         || 
         || 7) Add the non-solve functionality (to only convert models and not to solve);
         ||
-        || ~EXTRA~) Add the "export log file" functionality
+        || ~EXTRA~) Add the "export log file" functionality [[[PARTIAL!]]]
 
               || 8) Finish to add the comments inside the functions
               || 
