@@ -12,10 +12,13 @@ import json
 import time
 import argparse
 
+from io import StringIO
 from typing import Tuple
 from collections import namedtuple
 
 import numpy as np
+
+from wurlitzer import pipes, STDOUT
 
 g_runtime = 0
 
@@ -355,8 +358,6 @@ params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
 def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.OptimizationStatus:
     # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
-    if(params.EXPORTING_LOGFILE_PATH):
-        pass #TODO
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.max_seconds = params.TOTAL_SOLVING_TIME
     if(params.PRINT_SOLUTION_LOG):
@@ -369,7 +370,15 @@ def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.Optimi
     if(params.RELATIVE_MIP_GAP_VALUE > 0):
         solver.max_mip_gap = params.RELATIVE_MIP_GAP_VALUE
     solving_start_time = time.time()
-    status = solver.optimize()
+    if(params.EXPORTING_LOGFILE_PATH):
+        out = StringIO()
+        with pipes(stdout=out, stderr=STDOUT):
+            status = solver.optimize()
+        stdout = out.getvalue()
+        with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+            f.write(stdout)
+    else:
+        status = solver.optimize()
     g_runtime = time.time() - solving_start_time
     
     return status
