@@ -7,8 +7,6 @@ BRANCH  ||
         || 3) Add an "infer input type" functionality to Solve_LP [OK!];
         ||     -> First criteria: Input file extension [OK!];
         ||     -> Second criteria: Try-and-error reading the data [OK!];
-        || 
-        || ~EXTRA~) Add type hints to the functions [[[PARTIAL!]]]
 
         || 4) Define how a json-output file would looks like [OK!]
         || 
@@ -20,7 +18,7 @@ BRANCH  ||
         || 
         || 7) Add the non-solve functionality (to only convert models and not to solve);
         ||
-        || ~EXTRA~) Add the "export log file" functionality [[[PARTIAL!]]]
+        || ~EXTRA~) Add the "export log file" functionality [OK!]
 
               || 8) Finish to add the comments inside the functions
               || 
@@ -29,6 +27,8 @@ DOCUMENTATION ||
 BRANCH        || 10) Finish the User_Guide.pdf file;
               || 
               || 11) Finish the index.html file;
+              ||
+              || ~EXTRA~) Add type hints to the functions [[[PARTIAL!]]]
 
 *** Finally: Change the repository to public instead of private. ***
 
