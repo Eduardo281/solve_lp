@@ -222,6 +222,9 @@ def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
     # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
     if(params.EXPORTING_LOGFILE_PATH):
+        if(os.path.isfile(params.EXPORTING_LOGFILE_PATH)):
+            f = open(params.EXPORTING_LOGFILE_PATH, "w")
+            f.close()
         solver.setParam("LogFile", params.EXPORTING_LOGFILE_PATH)
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.setParam('TimeLimit', params.TOTAL_SOLVING_TIME)
@@ -370,15 +373,7 @@ def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.Optimi
     if(params.RELATIVE_MIP_GAP_VALUE > 0):
         solver.max_mip_gap = params.RELATIVE_MIP_GAP_VALUE
     solving_start_time = time.time()
-    if(params.EXPORTING_LOGFILE_PATH):
-        out = StringIO()
-        with pipes(stdout=out, stderr=STDOUT):
-            status = solver.optimize()
-        stdout = out.getvalue()
-        with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
-            f.write(stdout)
-    else:
-        status = solver.optimize()
+    status = solver.optimize()
     g_runtime = time.time() - solving_start_time
     
     return status
@@ -652,34 +647,6 @@ def validate_and_build_solving_parameters(A, b, c, obj_type, bin_vars, int_vars,
         obj_type = 'min'
 
     return A, b, c, m, n, obj_type, var_range, row_range, var_type, leq_constraints, geq_constraints
-
-def print_help_with_solvers_message():
-    print('*****')
-    print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
-    print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
-    print("For more information please refer to the solvers/or-tools documentations.")
-    print()
-    print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
-    print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
-    print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
-    print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-    print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
-    print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
-    print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-    print('*) PDLP: Google First Order LP solver (...)')
-    print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
-    print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
-    print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-    print('Where...')
-    print('BP = Binary Programming (only binary variables);')
-    print('IP = Integer Programming (integer and/or binary variables)')
-    print('LP = Linear Programming (only real variables)')
-    print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
-    print()
-    print('General notes:')
-    print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
-    print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
-    print('*****')
 
 def build_arg_parser():
     parser = argparse.ArgumentParser(prog='solve_lp', 
@@ -1118,6 +1085,34 @@ def export_lp_model(solver, params):
     else:
         raise RuntimeError("Problem exporting .lp file!")
 
+def print_help_with_solvers_message():
+    print('*****')
+    print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
+    print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
+    print("For more information please refer to the solvers/or-tools documentations.")
+    print()
+    print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
+    print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
+    print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
+    print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
+    print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
+    print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('*) PDLP: Google First Order LP solver (...)')
+    print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
+    print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
+    print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('Where...')
+    print('BP = Binary Programming (only binary variables);')
+    print('IP = Integer Programming (integer and/or binary variables)')
+    print('LP = Linear Programming (only real variables)')
+    print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
+    print()
+    print('General notes:')
+    print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
+    print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
+    print('*****')
+
 def main():
     # Default solve_lp parameters:
     default_arguments = {
@@ -1216,13 +1211,29 @@ def main():
             # Solving the model using Google's OR-Tools with the selected solver
             solver, x, obj, cstr = build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
-            status = solve_OR_Tools_model(solver, params)
+            if(params.EXPORTING_LOGFILE_PATH):
+                out = StringIO()
+                with pipes(stdout=out, stderr=STDOUT):
+                    status = solve_OR_Tools_model(solver, params)
+                stdout = out.getvalue()
+                with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                    f.write(stdout)
+            else:
+                status = solve_OR_Tools_model(solver, params)
             print_OR_Tools_solution(solver, status, params)
         elif(params.MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
             # Solving the model using Python MIP with the selected solver
             solver, x, obj, cstr = build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
-            status = solve_Python_MIP_model(solver, params)
+            if(params.EXPORTING_LOGFILE_PATH):
+                out = StringIO()
+                with pipes(stdout=out, stderr=STDOUT):
+                    status = solve_Python_MIP_model(solver, params)
+                stdout = out.getvalue()
+                with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                    f.write(stdout)
+            else:
+                status = solve_Python_MIP_model(solver, params)
             print_Python_MIP_solution(solver, status, params)
         elif(params.MODELING_LANGUAGE_NAME == 'GUROBIPY'):
             # Solving the model using Gurobi with its own modeling language
