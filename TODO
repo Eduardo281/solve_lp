@@ -28,6 +28,8 @@ BRANCH        || 10) Finish the User_Guide.pdf file;
               || 
               || 11) Finish the index.html file;
               ||
+              || 12) Add any license note when calling solve_lp ou in any part of the help?
+              ||
               || ~EXTRA~) Add type hints to the functions [[[PARTIAL!]]]
 
 *** Finally: Change the repository to public instead of private. ***
