@@ -13,7 +13,7 @@ import time
 import argparse
 
 from io import StringIO
-from typing import Tuple
+from typing import Tuple, NamedTuple
 from collections import namedtuple
 
 import numpy as np
@@ -21,6 +21,19 @@ import numpy as np
 from wurlitzer import pipes, STDOUT
 
 g_runtime = 0
+
+class DefaultArgumentsTuple(NamedTuple):
+    ACCEPTED_SOLVERS: list=["BOP", "CBC", "CLP", "CPLEX", "GLOP", "GLPK", "GUROBI", "PDLP", "SAT", "SCIP", "XPRESS"]
+    ACCEPTED_MODELING_LANGUAGES: list=["GUROBIPY", "OR-TOOLS", "PYTHON-MIP"]
+    DEFAULT_MODELING_LANGUAGE_MAT_JSON: str="OR-TOOLS"
+    DEFAULT_MODELING_LANGUAGE_LP_MPS: str="PYTHON-MIP"
+    DEFAULT_OR_TOOLS_SOLVER: str="SCIP"
+    DEFAULT_PYTHON_MIP_SOLVER: str="CBC"
+    DEFAULT_SOLVING_TIME: float=30
+    DEFAULT_DIGITS_ON_SOLUTION: int=5
+    DEFAULT_NUM_THREADS: int=1
+    DEFAULT_MIP_GAP: float=10**(-5)
+    DEFAULT_INPUT_TYPE: str="infer"
 
 def build_OR_Tools_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
 var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
@@ -758,7 +771,7 @@ def process_args_from_parser(args, default_arguments):
     if(args.input_type):
         INPUT_TYPE = args.input_type
     else:
-        INPUT_TYPE = default_arguments["DEFAULT_INPUT_TYPE"]
+        INPUT_TYPE = default_arguments.DEFAULT_INPUT_TYPE
 
     if(INPUT_TYPE == "infer"):
         if(VERBOSE_PRINT):
@@ -774,38 +787,38 @@ def process_args_from_parser(args, default_arguments):
     if(args.time):
         TOTAL_SOLVING_TIME = args.time[0]
     else:
-        TOTAL_SOLVING_TIME = default_arguments["DEFAULT_SOLVING_TIME"]
+        TOTAL_SOLVING_TIME = default_arguments.DEFAULT_SOLVING_TIME
     
     if(args.digits):
         DIGITS_ON_SOLUTION = args.digits[0]
     else:
-        DIGITS_ON_SOLUTION = default_arguments["DEFAULT_DIGITS_ON_SOLUTION"]
+        DIGITS_ON_SOLUTION = default_arguments.DEFAULT_DIGITS_ON_SOLUTION
 
     if(args.modeling_language):
-        if(args.modeling_language[0].upper() not in default_arguments["ACCEPTED_MODELING_LANGUAGES"]):
+        if(args.modeling_language[0].upper() not in default_arguments.ACCEPTED_MODELING_LANGUAGES):
             print('The modeling languages available are:')
-            print(default_arguments["ACCEPTED_MODELING_LANGUAGES"])
+            print(default_arguments.ACCEPTED_MODELING_LANGUAGES)
             print('Input received was: {}'.format(args.modeling_language[0]))
             raise ValueError('Did not find solver with the specified name!')
         MODELING_LANGUAGE_NAME = args.modeling_language[0].upper()
     else:
         if(INPUT_TYPE in ['matrix', 'json']):
-            MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE_MAT_JSON"]
+            MODELING_LANGUAGE_NAME = default_arguments.DEFAULT_MODELING_LANGUAGE_MAT_JSON
         elif(INPUT_TYPE in ['mps', 'lp']):
-            MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE_LP_MPS"]
+            MODELING_LANGUAGE_NAME = default_arguments.DEFAULT_MODELING_LANGUAGE_LP_MPS
 
     if(args.solver):
-        if(args.solver[0].upper() not in default_arguments["ACCEPTED_SOLVERS"]):
+        if(args.solver[0].upper() not in default_arguments.ACCEPTED_SOLVERS):
             print('The solvers available are:')
-            print(default_arguments["ACCEPTED_SOLVERS"])
+            print(default_arguments.ACCEPTED_SOLVERS)
             print('Input received was: {}'.format(args.solver[0]))
             raise ValueError('Did not find solver with the specified name!')
         SOLVER_NAME = args.solver[0]
     else:
         if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
-            SOLVER_NAME = default_arguments["DEFAULT_OR_TOOLS_SOLVER"]
+            SOLVER_NAME = default_arguments.DEFAULT_OR_TOOLS_SOLVER
         elif(MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
-            SOLVER_NAME = default_arguments["DEFAULT_PYTHON_MIP_SOLVER"]
+            SOLVER_NAME = default_arguments.DEFAULT_PYTHON_MIP_SOLVER
         elif(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
             SOLVER_NAME = 'GUROBI'
         else:
@@ -814,12 +827,12 @@ def process_args_from_parser(args, default_arguments):
     if(args.threads):
         NUM_THREADS = args.threads[0]
     else:
-        NUM_THREADS = default_arguments["DEFAULT_NUM_THREADS"]
+        NUM_THREADS = default_arguments.DEFAULT_NUM_THREADS
 
     if(args.gap):
         RELATIVE_MIP_GAP_VALUE = args.gap[0]
     else:
-        RELATIVE_MIP_GAP_VALUE = default_arguments["DEFAULT_MIP_GAP"]
+        RELATIVE_MIP_GAP_VALUE = default_arguments.DEFAULT_MIP_GAP
 
     if(args.memory_limit):
         MEMORY_LIMIT = args.memory_limit[0]
@@ -1121,19 +1134,7 @@ def print_help_with_solvers_message():
 
 def main():
     # Default solve_lp parameters:
-    default_arguments = {
-        "ACCEPTED_SOLVERS": ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS'],
-        "ACCEPTED_MODELING_LANGUAGES": ['GUROBIPY', 'OR-TOOLS', 'PYTHON-MIP'],
-        "DEFAULT_MODELING_LANGUAGE_MAT_JSON": 'OR-TOOLS',
-        "DEFAULT_MODELING_LANGUAGE_LP_MPS": 'PYTHON-MIP',
-        "DEFAULT_OR_TOOLS_SOLVER": 'SCIP',
-        "DEFAULT_PYTHON_MIP_SOLVER": 'CBC',
-        "DEFAULT_SOLVING_TIME":  30,
-        "DEFAULT_DIGITS_ON_SOLUTION":  5,
-        "DEFAULT_NUM_THREADS": 1,
-        "DEFAULT_MIP_GAP": 10**(-5),
-        "DEFAULT_INPUT_TYPE": 'infer'
-    }
+    default_arguments = DefaultArgumentsTuple()
 
     # Building the argument parser:
     parser = build_arg_parser()
