@@ -35,6 +35,30 @@ class DefaultArgumentsTuple(NamedTuple):
     DEFAULT_MIP_GAP: float=10**(-5)
     DEFAULT_INPUT_TYPE: str="infer"
 
+class ParametersTuple(NamedTuple):
+    INPUT_FILE_PATH: str
+    INPUT_TYPE: str
+    PRINT_ZERO_VARS: bool
+    PRINT_SOLUTION_LOG: bool
+    VERBOSE_PRINT: bool
+    CHECK_CLIQUE_MERGE: bool
+    TOTAL_SOLVING_TIME: float
+    DIGITS_ON_SOLUTION: int
+    MODELING_LANGUAGE_NAME: str
+    SOLVER_NAME: str
+    NUM_THREADS: int
+    RELATIVE_MIP_GAP_VALUE: float
+    MEMORY_LIMIT: float
+    NODEFILE_START_SIZE: float
+    EXPORT_SOLUTION_JSON: bool
+    SOLUTION_JSON_PATH: str
+    EXPORT_MPS_FILE: bool
+    MODEL_MPS_EXPORTING_PATH: str
+    EXPORT_LP_FILE: bool
+    MODEL_LP_EXPORTING_PATH: str
+    EXPORTING_LOGFILE_PATH: str
+    SKIP_SOLVE: bool
+
 def build_OR_Tools_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
 var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
 var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
@@ -763,7 +787,7 @@ def infer_type(INPUT_FILE_PATH):
             else:
                 return "matrix"
 
-def process_args_from_parser(args, default_arguments):
+def process_args_from_parser(args, default_arguments) -> ParametersTuple:
     INPUT_FILE_PATH = args.file[0]
 
     VERBOSE_PRINT = args.verbose
@@ -873,16 +897,7 @@ def process_args_from_parser(args, default_arguments):
 
     SKIP_SOLVE = args.skip_solve
 
-    parametersTuple = namedtuple('parametersTuple', [
-        "INPUT_FILE_PATH", "INPUT_TYPE", "PRINT_ZERO_VARS", "PRINT_SOLUTION_LOG",
-        "VERBOSE_PRINT", "CHECK_CLIQUE_MERGE", "TOTAL_SOLVING_TIME", "DIGITS_ON_SOLUTION",
-        "MODELING_LANGUAGE_NAME", "SOLVER_NAME", "NUM_THREADS", "RELATIVE_MIP_GAP_VALUE",
-        "MEMORY_LIMIT", "NODEFILE_START_SIZE", "EXPORT_SOLUTION_JSON", "SOLUTION_JSON_PATH",
-        "EXPORT_MPS_FILE", "MODEL_MPS_EXPORTING_PATH", "EXPORT_LP_FILE", "MODEL_LP_EXPORTING_PATH",
-        "EXPORTING_LOGFILE_PATH", "SKIP_SOLVE"
-    ])
-
-    params = parametersTuple(
+    params = ParametersTuple(
         INPUT_FILE_PATH,
         INPUT_TYPE,
         PRINT_ZERO_VARS,
