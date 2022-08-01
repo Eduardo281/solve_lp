@@ -16,7 +16,7 @@ BRANCH  ||
         ||
         || 6.2) Add the lp-export functionality (to convert models from other input styles) [OK!];
         || 
-        || 7) Add the non-solve functionality (to only convert models and not to solve);
+        || 7) Add the non-solve functionality (to only convert models and not to solve) [OK!];
         ||
         || ~EXTRA~) Add the "export log file" functionality [OK!]
 
