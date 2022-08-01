@@ -687,6 +687,9 @@ def build_arg_parser():
     parser.add_argument('--export-logfile', nargs = 1, metavar='LOGFILE_PATH', type=str,
         dest='exporting_logfile_path', default=None, help = 'To export the solver log into a file.')
 
+    parser.add_argument('--skip-solve', dest='skip_solve', default=False, action='store_true', 
+        help = 'Skip the solving step.')
+
     parser.add_argument('--help-with-solvers', action='store_true', default=None, 
         dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
 
@@ -855,13 +858,15 @@ def process_args_from_parser(args, default_arguments):
     else:
         EXPORTING_LOGFILE_PATH = None
 
+    SKIP_SOLVE = args.skip_solve
+
     parametersTuple = namedtuple('parametersTuple', [
         "INPUT_FILE_PATH", "INPUT_TYPE", "PRINT_ZERO_VARS", "PRINT_SOLUTION_LOG",
         "VERBOSE_PRINT", "CHECK_CLIQUE_MERGE", "TOTAL_SOLVING_TIME", "DIGITS_ON_SOLUTION",
         "MODELING_LANGUAGE_NAME", "SOLVER_NAME", "NUM_THREADS", "RELATIVE_MIP_GAP_VALUE",
         "MEMORY_LIMIT", "NODEFILE_START_SIZE", "EXPORT_SOLUTION_JSON", "SOLUTION_JSON_PATH",
         "EXPORT_MPS_FILE", "MODEL_MPS_EXPORTING_PATH", "EXPORT_LP_FILE", "MODEL_LP_EXPORTING_PATH",
-        "EXPORTING_LOGFILE_PATH"
+        "EXPORTING_LOGFILE_PATH", "SKIP_SOLVE"
     ])
 
     params = parametersTuple(
@@ -885,7 +890,8 @@ def process_args_from_parser(args, default_arguments):
         MODEL_MPS_EXPORTING_PATH,
         EXPORT_LP_FILE,
         MODEL_LP_EXPORTING_PATH,
-        EXPORTING_LOGFILE_PATH
+        EXPORTING_LOGFILE_PATH,
+        SKIP_SOLVE
     )
 
     return params
@@ -1211,36 +1217,39 @@ def main():
             # Solving the model using Google's OR-Tools with the selected solver
             solver, x, obj, cstr = build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
-            if(params.EXPORTING_LOGFILE_PATH):
-                out = StringIO()
-                with pipes(stdout=out, stderr=STDOUT):
+            if(not params.SKIP_SOLVE):
+                if(params.EXPORTING_LOGFILE_PATH):
+                    out = StringIO()
+                    with pipes(stdout=out, stderr=STDOUT):
+                        status = solve_OR_Tools_model(solver, params)
+                    stdout = out.getvalue()
+                    with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                        f.write(stdout)
+                else:
                     status = solve_OR_Tools_model(solver, params)
-                stdout = out.getvalue()
-                with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
-                    f.write(stdout)
-            else:
-                status = solve_OR_Tools_model(solver, params)
-            print_OR_Tools_solution(solver, status, params)
+                print_OR_Tools_solution(solver, status, params)
         elif(params.MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
             # Solving the model using Python MIP with the selected solver
             solver, x, obj, cstr = build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
-            if(params.EXPORTING_LOGFILE_PATH):
-                out = StringIO()
-                with pipes(stdout=out, stderr=STDOUT):
+            if(not params.SKIP_SOLVE):
+                if(params.EXPORTING_LOGFILE_PATH):
+                    out = StringIO()
+                    with pipes(stdout=out, stderr=STDOUT):
+                        status = solve_Python_MIP_model(solver, params)
+                    stdout = out.getvalue()
+                    with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                        f.write(stdout)
+                else:
                     status = solve_Python_MIP_model(solver, params)
-                stdout = out.getvalue()
-                with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
-                    f.write(stdout)
-            else:
-                status = solve_Python_MIP_model(solver, params)
-            print_Python_MIP_solution(solver, status, params)
+                print_Python_MIP_solution(solver, status, params)
         elif(params.MODELING_LANGUAGE_NAME == 'GUROBIPY'):
             # Solving the model using Gurobi with its own modeling language
             solver, x, obj, cstr = build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
                 geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
-            status = solve_Gurobipy_model(solver, params)
-            print_Gurobipy_solution(solver, status, params)
+            if(not params.SKIP_SOLVE):
+                status = solve_Gurobipy_model(solver, params)
+                print_Gurobipy_solution(solver, status, params)
         else:
             raise RuntimeError('Problem processing the selected modeling language!')
     elif(params.INPUT_TYPE in ['mps', 'lp']):
@@ -1248,11 +1257,21 @@ def main():
         if(params.MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
             pass
         if(params.MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
-            status = solve_Python_MIP_model(solver, params)
-            print_Python_MIP_solution(solver, status, params)
+            if(not params.SKIP_SOLVE):
+                if(params.EXPORTING_LOGFILE_PATH):
+                    out = StringIO()
+                    with pipes(stdout=out, stderr=STDOUT):
+                        status = solve_Python_MIP_model(solver, params)
+                    stdout = out.getvalue()
+                    with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                        f.write(stdout)
+                else:
+                    status = solve_Python_MIP_model(solver, params)
+                print_Python_MIP_solution(solver, status, params)
         if(params.MODELING_LANGUAGE_NAME == 'GUROBIPY'):
-            status = solve_Gurobipy_model(solver, params)
-            print_Gurobipy_solution(solver, status, params)
+            if(not params.SKIP_SOLVE):
+                status = solve_Gurobipy_model(solver, params)
+                print_Gurobipy_solution(solver, status, params)
 
     if(params.EXPORT_SOLUTION_JSON):
         export_results_json(solver, status, params)
