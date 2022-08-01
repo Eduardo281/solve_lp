@@ -14,7 +14,6 @@ import argparse
 
 from io import StringIO
 from typing import Tuple, NamedTuple
-from collections import namedtuple
 
 import numpy as np
 
@@ -459,7 +458,7 @@ def build_empty_parameters() -> Tuple[str, str, str, str, str, str, str]:
 
     return (obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs)
 
-def process_matrix_input_data(params):
+def process_matrix_input_data(params: ParametersTuple):
     c = list()
     b = list()
     A = list()
@@ -585,7 +584,7 @@ def process_matrix_input_data(params):
 
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
-def process_json_input_data(params):
+def process_json_input_data(params: ParametersTuple):
     with open(params.INPUT_FILE_PATH) as file:
         data_json = json.load(file)
     b = np.array(data_json['b'], dtype=float)
@@ -620,7 +619,7 @@ def process_json_input_data(params):
         lb_inputs = data_json['lb']
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
-def process_mps_or_lp_input_model(params):
+def process_mps_or_lp_input_model(params: ParametersTuple):
     if(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
         # Setting up the selected optimization solver:
         if(params.SOLVER_NAME.upper()=="CBC"):
@@ -685,7 +684,7 @@ def validate_and_build_solving_parameters(A, b, c, obj_type, bin_vars, int_vars,
 
     return A, b, c, m, n, obj_type, var_range, row_range, var_type, leq_constraints, geq_constraints
 
-def build_arg_parser():
+def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog='solve_lp', 
         allow_abbrev=False,
         description = '''Solve_lp is a CLI used to solve linear programming problems in a simple way.''',
@@ -760,7 +759,7 @@ def build_arg_parser():
 
     return parser
 
-def infer_type(INPUT_FILE_PATH):
+def infer_type(INPUT_FILE_PATH: str):
     # First try: Using file extension:
     file_name, file_ext = os.path.splitext(INPUT_FILE_PATH)
     if(file_ext == '.mat'):
@@ -787,7 +786,7 @@ def infer_type(INPUT_FILE_PATH):
             else:
                 return "matrix"
 
-def process_args_from_parser(args, default_arguments) -> ParametersTuple:
+def process_args_from_parser(args, default_arguments: DefaultArgumentsTuple) -> ParametersTuple:
     INPUT_FILE_PATH = args.file[0]
 
     VERBOSE_PRINT = args.verbose
@@ -924,7 +923,7 @@ def process_args_from_parser(args, default_arguments) -> ParametersTuple:
 
     return params
 
-def export_results_json(solver, status, params):
+def export_results_json(solver, status, params: ParametersTuple):
     results_json = dict()
     variables_list = list()
     status_text = "Unknown"
@@ -1097,7 +1096,7 @@ def export_results_json(solver, status, params):
     json.dump(results_json, open(params.SOLUTION_JSON_PATH, "w"))
     return 
 
-def export_mps_model(solver, params):
+def export_mps_model(solver, params: ParametersTuple):
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         with open(params.MODEL_MPS_EXPORTING_PATH, "w") as file:
             file.write(solver.ExportModelAsMpsFormat(False, False))
@@ -1108,7 +1107,7 @@ def export_mps_model(solver, params):
     else:
         raise RuntimeError("Problem exporting .mps file!")
 
-def export_lp_model(solver, params):
+def export_lp_model(solver, params: ParametersTuple):
     if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
         with open(params.MODEL_LP_EXPORTING_PATH, "w") as file:
             file.write(solver.ExportModelAsLpFormat(False))
@@ -1119,7 +1118,7 @@ def export_lp_model(solver, params):
     else:
         raise RuntimeError("Problem exporting .lp file!")
 
-def print_help_with_solvers_message():
+def print_help_with_solvers_message() -> None:
     print('*****')
     print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
     print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
