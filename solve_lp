@@ -1192,32 +1192,6 @@ def main():
             print('Starting to instantiate the inputed solver ({})...'.format(params.SOLVER_NAME.upper()))
             print()
 
-        # Creating the optimization model and the variables:
-        print('b:')
-        print(b)
-        print(type(b))
-        print('c:')
-        print(c)
-        print(type(c))
-        print('A:')
-        print(A)
-        print(type(A))
-        print('leq:')
-        print(leq_constraints)
-        print('geq:')
-        print(geq_constraints)
-        print('bin:')
-        print(bin_vars)
-        print('int:')
-        print(int_vars)
-        print('obj_type: ' + obj_type + "\n")
-        print('ub_inputs:')
-        print(ub_inputs)
-        print(type(ub_inputs))
-        print('lb_inputs:')
-        print(lb_inputs)
-        print(type(lb_inputs))
-
         # Verbose mode information printing
         if(params.VERBOSE_PRINT):
             print('Validating data and starting to build the model...')
