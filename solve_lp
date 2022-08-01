@@ -1,20 +1,33 @@
 #!/usr/bin/python3
 
-from ortools.linear_solver import pywraplp
 import mip
 import gurobipy as gp
 
-import numpy as np
+from ortools.linear_solver import pywraplp
+
+import os
 import re
 import sys
 import json
-
+import time
 import argparse
 
-def build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
-geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME):
+from io import StringIO
+from typing import Tuple
+from collections import namedtuple
+
+import numpy as np
+
+from wurlitzer import pipes, STDOUT
+
+g_runtime = 0
+
+def build_OR_Tools_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
+var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
+var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
+params: Tuple) -> Tuple[pywraplp.Solver, dict, pywraplp.Objective, dict]:
     # Create the solver object and the infinity value:
-    solver = pywraplp.Solver.CreateSolver(SOLVER_NAME)
+    solver = pywraplp.Solver.CreateSolver(params.SOLVER_NAME)
     infinity = solver.infinity()
 
     # Processing the upper and lower bounds using the OR-Tools infinity:
@@ -72,50 +85,70 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME):
 
     return solver, x, obj, cstr
 
-def solve_OR_Tools_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG):
-    # Solving the problem and printing results:
-    if(TOTAL_SOLVING_TIME > 0):
-        solver.set_time_limit(TOTAL_SOLVING_TIME * 1000)
-    if(PRINT_SOLUTION_LOG):
+def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
+    # Solving the problem and passing the total runtime to g_runtime:
+    global g_runtime
+    if(params.EXPORTING_LOGFILE_PATH):
+        pass #TODO
+    if(params.TOTAL_SOLVING_TIME > 0):
+        solver.set_time_limit(params.TOTAL_SOLVING_TIME * 1000)
+    if(params.PRINT_SOLUTION_LOG):
         solver.EnableOutput()
-    solver.SetNumThreads(NUM_THREADS)
-    if(RELATIVE_MIP_GAP_VALUE > 0):
+    solver.SetNumThreads(params.NUM_THREADS)
+    if(params.RELATIVE_MIP_GAP_VALUE > 0):
         solverParams = pywraplp.MPSolverParameters()
-        solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, RELATIVE_MIP_GAP_VALUE)
+        solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, params.RELATIVE_MIP_GAP_VALUE)
+        solving_start_time = time.time()
         status = solver.Solve(solverParams)
     else:
+        solving_start_time = time.time()
         status = solver.Solve()
+    g_runtime = time.time() - solving_start_time
 
     return status
 
-def print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
-    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+def print_OR_Tools_solution(solver: pywraplp.Solver, status: int, params: Tuple) -> None:
+    print('Variables defined: [ ')
+    print('    ', end='')
+    for var in solver.variables():
+        print(f'{var.name()}', end=' ')
+    print('\n]')
+
+    if(solver.Objective().minimization()):
+        obj_type = 'MIN'
+    elif(solver.Objective().maximization()):
+        obj_type = 'MAX'
+    else:
+        raise RuntimeError('Problem in printing the objective function type!')
+
     print('Objective function being considered: {}'.format(obj_type.upper()))
     if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
         ObjVal = solver.Objective().Value()
-        print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
+        print('Objective found with value: {}'.format(round(ObjVal, params.DIGITS_ON_SOLUTION)))
         if(status == solver.FEASIBLE):
             print('The solution found is FEASIBLE!')
         else:
             print('The solution found is OPTIMAL!')
         print('Variables values:')
-        if(PRINT_ZERO_VARS):
-            for j in var_range:
-                print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+        if(params.PRINT_ZERO_VARS):
+            for var in solver.variables():
+                print('{} = {}'.format(var.name(), round(var.solution_value(), params.DIGITS_ON_SOLUTION)))
         else:
-            for j in var_range:
-                if(x[j].solution_value() != 0):
-                    print('x[{}] = {}'.format(j, round(x[j].solution_value(), DIGITS_ON_SOLUTION)))
+            for var in solver.variables():
+                if(var.solution_value() != 0):
+                    print('{} = {}'.format(var.name(), round(var.solution_value(), params.DIGITS_ON_SOLUTION)))
     elif(status == solver.UNBOUNDED):
         print('The problem is unbounded!')
     else:
         print('No solution found!')
 
-def build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
-geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, MEMORY_LIMIT):
-    if(MEMORY_LIMIT):
+def build_Gurobipy_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
+var_range: range, row_range: range, leq_constraints: list, geq_constraints:list, 
+var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
+params: Tuple) -> Tuple[gp.Model, dict, None, dict]:
+    if(params.MEMORY_LIMIT):
         env = gp.Env(empty=True)
-        env.setParam("MemLimit", MEMORY_LIMIT)
+        env.setParam("MemLimit", params.MEMORY_LIMIT)
         env.start()
         solver = gp.Model(env=env)
     else:
@@ -185,42 +218,61 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, MEMORY_LIMIT):
 
     return solver, x, obj, cstr
 
-def solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, 
-PRINT_SOLUTION_LOG, NODEFILE_START_SIZE):
-    # Solving the problem and printing results:
-    if(TOTAL_SOLVING_TIME > 0):
-        solver.setParam('TimeLimit', TOTAL_SOLVING_TIME)
-    if(PRINT_SOLUTION_LOG):
+def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
+    # Solving the problem and passing the total runtime to g_runtime:
+    global g_runtime
+    if(params.EXPORTING_LOGFILE_PATH):
+        if(os.path.isfile(params.EXPORTING_LOGFILE_PATH)):
+            f = open(params.EXPORTING_LOGFILE_PATH, "w")
+            f.close()
+        solver.setParam("LogFile", params.EXPORTING_LOGFILE_PATH)
+    if(params.TOTAL_SOLVING_TIME > 0):
+        solver.setParam('TimeLimit', params.TOTAL_SOLVING_TIME)
+    if(params.PRINT_SOLUTION_LOG):
         solver.setParam('LogToConsole', 1)
     else:
         solver.setParam('LogToConsole', 0)
-    solver.setParam('Threads', NUM_THREADS)
-    if(RELATIVE_MIP_GAP_VALUE > 0):
-        solver.setParam('MIPGap', RELATIVE_MIP_GAP_VALUE)
-    if(NODEFILE_START_SIZE):
-        solver.setParam("NodefileStart", NODEFILE_START_SIZE)
+    solver.setParam('Threads', params.NUM_THREADS)
+    if(params.RELATIVE_MIP_GAP_VALUE > 0):
+        solver.setParam('MIPGap', params.RELATIVE_MIP_GAP_VALUE)
+    if(params.NODEFILE_START_SIZE):
+        solver.setParam("NodefileStart", params.NODEFILE_START_SIZE)
+    solving_start_time = time.time()
     solver.optimize()
+    g_runtime = time.time() - solving_start_time
 
     return solver.Status
 
-def print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
-    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+def print_Gurobipy_solution(solver: gp.Model, status: int, params: Tuple) -> None:
+    print('Variables defined: [ ')
+    print('    ', end='')
+    for var in solver.getVars():
+        print(f'{var.VarName}', end=' ')
+    print('\n]')
+
+    if(solver.ModelSense == gp.GRB.MINIMIZE):
+        obj_type = 'MIN'
+    elif(solver.ModelSense == gp.GRB.MAXIMIZE):
+        obj_type = 'MAX'
+    else:
+        raise RuntimeError('Problem in printing the objective function type!')
+
     print('Objective function being considered: {}'.format(obj_type.upper()))
     if((status == gp.GRB.SUBOPTIMAL) or (status == gp.GRB.OPTIMAL)):
         ObjVal = solver.ObjVal
-        print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
+        print('Objective found with value: {}'.format(round(ObjVal, params.DIGITS_ON_SOLUTION)))
         if(status == gp.GRB.SUBOPTIMAL):
             print('The solution found is FEASIBLE!')
         else:
             print('The solution found is OPTIMAL!')
         print('Variables values:')
-        if(PRINT_ZERO_VARS):
-            for j in var_range:
-                print('x[{}] = {}'.format(j, round(x[j].X, DIGITS_ON_SOLUTION)))
+        if(params.PRINT_ZERO_VARS):
+            for var in solver.getVars():
+                print('{} = {}'.format(var.VarName, round(var.X, params.DIGITS_ON_SOLUTION)))
         else:
-            for j in var_range:
-                if(x[j].X != 0):
-                    print('x[{}] = {}'.format(j, round(x[j].X, DIGITS_ON_SOLUTION)))
+            for var in solver.getVars():
+                if(var.X != 0):
+                    print('{} = {}'.format(var.VarName, round(var.X, params.DIGITS_ON_SOLUTION)))
     elif(status == gp.GRB.UNBOUNDED):
         print('The problem is unbounded!')
     else:
@@ -228,8 +280,10 @@ def print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON
 
     return status
 
-def build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
-geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME):
+def build_Python_MIP_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
+var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
+var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
+params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
     # Processing objective type:
     if(obj_type == '*EMPTY*'):
         obj_type = 'min'
@@ -241,9 +295,9 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME):
         raise RuntimeError('Problem in the objective function type input!')
 
     # Setting up the selected optimization solver:
-    if(SOLVER_NAME.upper()=="CBC"):
+    if(params.SOLVER_NAME.upper()=="CBC"):
         solver = mip.Model(solver_name=mip.CBC, sense=model_sense)
-    elif(SOLVER_NAME.upper()=="GUROBI"):
+    elif(params.SOLVER_NAME.upper()=="GUROBI"):
         solver = mip.Model(solver_name=mip.GUROBI, sense=model_sense)
     else:
         raise NameError('Invalid Solver name!')
@@ -304,41 +358,52 @@ geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME):
 
     return solver, x, obj, cstr
 
-def solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, CHECK_CLIQUE_MERGE):
-    # Solving the problem and printing results:
-    if(TOTAL_SOLVING_TIME > 0):
-        solver.max_seconds = TOTAL_SOLVING_TIME
-    if(PRINT_SOLUTION_LOG):
+def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.OptimizationStatus:
+    # Solving the problem and passing the total runtime to g_runtime:
+    global g_runtime
+    if(params.TOTAL_SOLVING_TIME > 0):
+        solver.max_seconds = params.TOTAL_SOLVING_TIME
+    if(params.PRINT_SOLUTION_LOG):
         solver.verbose = 1
     else:
         solver.verbose = 0
-    if(CHECK_CLIQUE_MERGE):
+    if(params.CHECK_CLIQUE_MERGE):
         solver.clique_merge()
-    solver.threads = NUM_THREADS
-    if(RELATIVE_MIP_GAP_VALUE > 0):
-        solver.max_mip_gap = RELATIVE_MIP_GAP_VALUE
+    solver.threads = params.NUM_THREADS
+    if(params.RELATIVE_MIP_GAP_VALUE > 0):
+        solver.max_mip_gap = params.RELATIVE_MIP_GAP_VALUE
+    solving_start_time = time.time()
     status = solver.optimize()
-
+    g_runtime = time.time() - solving_start_time
+    
     return status
 
-def print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, DIGITS_ON_SOLUTION, PRINT_ZERO_VARS):
-    print('Variables defined: x[{}], ..., x[{}].'.format(1, n))
+def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus, params: Tuple) -> None:
+    print('Variables defined: [ ')
+    print('    ', end='')
+    for var in solver.vars:
+        print(f'{var.name}', end=' ')
+    print('\n]')
+
+    obj_type = solver.sense
+
     print('Objective function being considered: {}'.format(obj_type.upper()))
+
     if((status == mip.OptimizationStatus.FEASIBLE) or (status == mip.OptimizationStatus.OPTIMAL)):
         ObjVal = solver.objective_value
-        print('Objective found with value: {}'.format(round(ObjVal, DIGITS_ON_SOLUTION)))
+        print('Objective found with value: {}'.format(round(ObjVal, params.DIGITS_ON_SOLUTION)))
         if(status == mip.OptimizationStatus.FEASIBLE):
             print('The solution found is FEASIBLE!')
         else:
             print('The solution found is OPTIMAL!')
         print('Variables values:')
-        if(PRINT_ZERO_VARS):
-            for j in var_range:
-                print('x[{}] = {}'.format(j, round(x[j].x, DIGITS_ON_SOLUTION)))
+        if(params.PRINT_ZERO_VARS):
+            for var in solver.vars:
+                print('{} = {}'.format(var.name, round(var.x, params.DIGITS_ON_SOLUTION)))
         else:
-            for j in var_range:
-                if(x[j].x != 0):
-                    print('x[{}] = {}'.format(j, round(x[j].x, DIGITS_ON_SOLUTION)))
+            for var in solver.vars:
+                if(var.x != 0):
+                    print('{} = {}'.format(var.name, round(var.x, params.DIGITS_ON_SOLUTION)))
     elif(status == mip.OptimizationStatus.UNBOUNDED):
         print('The problem is unbounded!')
     else:
@@ -346,7 +411,7 @@ def print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, DIGITS_
 
     return status
 
-def build_empty_parameters():
+def build_empty_parameters() -> Tuple[str, str, str, str, str, str, str]:
     leq_constraints = '*EMPTY*'
     geq_constraints = '*EMPTY*'
     bin_vars = '*EMPTY*'
@@ -355,9 +420,9 @@ def build_empty_parameters():
     ub_inputs = '*EMPTY*'
     lb_inputs = '*EMPTY*'
 
-    return obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
+    return (obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs)
 
-def process_matrix_input_data(INPUT_FILE_PATH):
+def process_matrix_input_data(params):
     c = list()
     b = list()
     A = list()
@@ -365,11 +430,11 @@ def process_matrix_input_data(INPUT_FILE_PATH):
 
     # Function to read the "bin", "int", "leq" and "geq" inputs:
     def read_range_friendly_input_format(input_line):
-        if(line[-1] == '*'):
+        if(input_line[-1] == '*'):
             values = '*'
-            return 
+            return values
         values = list()
-        aux_vals_list = re.search('=([ 0-9\-\,]+)$', line).group(1)
+        aux_vals_list = re.search('=([ 0-9\-\,]+)$', input_line).group(1)
         aux_vals_list = aux_vals_list.strip().split(',')
         for entry in aux_vals_list:
             if('-' in entry):
@@ -384,16 +449,16 @@ def process_matrix_input_data(INPUT_FILE_PATH):
     # Function to read the "ub" and "lb" values
     def read_number_or_array_input_format(input_line):
         try:
-            values = float(re.search('=([ 0-9\.\-]+)$', line).group(1))
+            values = float(re.search('=([ 0-9\.\-]+)$', input_line).group(1))
         except:
-            values = re.search('=([ 0-9\,\.\-]+)$', line).group(1)
+            values = re.search('=([ 0-9\,\.\-]+)$', input_line).group(1)
             values = values.strip().split(',')
             values = np.array(values, dtype=float)
         return values
 
     present_A_line = 0
     scanning_A_matrix = False
-    with open(INPUT_FILE_PATH) as file:
+    with open(params.INPUT_FILE_PATH) as file:
         for raw_line in file:
             line = raw_line.strip()
 
@@ -402,7 +467,7 @@ def process_matrix_input_data(INPUT_FILE_PATH):
                 present_A_line += 1
                 if(not line[-1] in '];'):
                     raise RuntimeError('The A matrix lines must end with ] or ;')
-                A.append([value.strip() for value in line[:-1].split(',')])
+                A.append(list(map(float, line[:-1].split(','))))
                 if(line[-1] == ';'):
                     continue
                 elif(line[-1] == ']'):
@@ -415,7 +480,7 @@ def process_matrix_input_data(INPUT_FILE_PATH):
                 start_point = line.find('[')
                 if((line[-1] != ']') or (start_point == -1)):
                     raise RuntimeError('Input b must be in the format: b = [val_1, val_2, ..., val_m]')
-                b = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
+                b = np.array(list(map(float, line[start_point+1:-1].split(','))))
                 continue
 
             # Reading the c = [...] line:
@@ -423,7 +488,7 @@ def process_matrix_input_data(INPUT_FILE_PATH):
                 start_point = line.find('[')
                 if((line[-1] != ']') or (start_point == -1)):
                     raise RuntimeError('Input c must be in the format: c = [val_1, val_2, ..., val_n]')
-                c = np.array([value.strip() for value in line[start_point+1:-1].split(',')], dtype=float)
+                c = np.array(list(map(float, line[start_point+1:-1].split(','))))
                 continue
 
             # Reading the first line of the A matrix:
@@ -434,7 +499,7 @@ def process_matrix_input_data(INPUT_FILE_PATH):
                     raise RuntimeError('Did not find the left square brackets [ while scanning the A matrix')
                 if(not line[-1] in '];'):
                     raise RuntimeError('The A matrix lines must end with ] or ;')
-                A.append([value.strip() for value in line[start_point+1:-1].split(',')])
+                A.append(list(map(float, line[start_point+1:-1].split(','))))
                 if(line[-1] == ']'):
                     scanning_A_matrix = False
                 else:
@@ -483,8 +548,8 @@ def process_matrix_input_data(INPUT_FILE_PATH):
 
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
-def process_json_input_data(INPUT_FILE_PATH):
-    with open(INPUT_FILE_PATH) as file:
+def process_json_input_data(params):
+    with open(params.INPUT_FILE_PATH) as file:
         data_json = json.load(file)
     b = np.array(data_json['b'], dtype=float)
     c = np.array(data_json['c'], dtype=float)
@@ -518,8 +583,26 @@ def process_json_input_data(INPUT_FILE_PATH):
         lb_inputs = data_json['lb']
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
-def process_mps_input_data():
-    pass
+def process_mps_or_lp_input_model(params):
+    if(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        # Setting up the selected optimization solver:
+        if(params.SOLVER_NAME.upper()=="CBC"):
+            solver = mip.Model(solver_name=mip.CBC)
+        elif(params.SOLVER_NAME.upper()=="GUROBI"):
+            solver = mip.Model(solver_name=mip.GUROBI)
+        else:
+            raise NameError('Invalid Solver name!')
+        solver.read(params.INPUT_FILE_PATH)
+    elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
+        solver = gp.read(params.INPUT_FILE_PATH)
+    else:
+        if(params.INPUT_TYPE == 'mps'):
+            raise RuntimeError('Problem reading MPS input file!')
+        elif(params.INPUT_TYPE == 'lp'):
+            raise RuntimeError('Problem reading LP input file!')
+        else:
+            raise RuntimeError('Unknown problem while reading the input file!')
+    return solver
 
 def validate_and_build_solving_parameters(A, b, c, obj_type, bin_vars, int_vars, leq_constraints, geq_constraints):
     #Validating shapes:
@@ -565,34 +648,6 @@ def validate_and_build_solving_parameters(A, b, c, obj_type, bin_vars, int_vars,
 
     return A, b, c, m, n, obj_type, var_range, row_range, var_type, leq_constraints, geq_constraints
 
-def print_help_with_solvers_message():
-    print('*****')
-    print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
-    print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
-    print("For more information please refer to the solvers/or-tools documentations.")
-    print()
-    print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
-    print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
-    print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
-    print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-    print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
-    print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
-    print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-    print('*) PDLP: Google First Order LP solver (...)')
-    print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
-    print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
-    print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
-    print('Where...')
-    print('BP = Binary Programming (only binary variables);')
-    print('IP = Integer Programming (integer and/or binary variables)')
-    print('LP = Linear Programming (only real variables)')
-    print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
-    print()
-    print('General notes:')
-    print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
-    print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
-    print('*****')
-
 def build_arg_parser():
     parser = argparse.ArgumentParser(prog='solve_lp', 
         allow_abbrev=False,
@@ -622,6 +677,19 @@ def build_arg_parser():
     parser.add_argument('-m', '--modeling-language', nargs=1, metavar='MODELING_LANGUAGE', type=str,
         default=None, dest='modeling_language', 
         help = 'Which modeling language to use. Available: GUROBIPY, OR-TOOLS and PYTHON-MIP.')
+
+    parser.add_argument('--export-solution-json', nargs = 1, metavar='JSON_FILEPATH', type=str,
+        dest='exporting_json_filepath', default=None, help = 'To export the results in a .json file.')
+    parser.add_argument('--export-mps-model', nargs = 1, metavar='MPS_FILEPATH', type=str,
+        dest='exporting_mps_filepath', default=None, help = 'To export the model in a .mps file.')
+    parser.add_argument('--export-lp-model', nargs = 1, metavar='LP_FILEPATH', type=str,
+        dest='exporting_lp_filepath', default=None, help = 'To export the model in a .lp file.')
+    parser.add_argument('--export-logfile', nargs = 1, metavar='LOGFILE_PATH', type=str,
+        dest='exporting_logfile_path', default=None, help = 'To export the solver log into a file.')
+
+    parser.add_argument('--skip-solve', dest='skip_solve', default=False, action='store_true', 
+        help = 'Skip the solving step.')
+
     parser.add_argument('--help-with-solvers', action='store_true', default=None, 
         dest='PRINT_HELP_WITH_SOLVERS', help='Prints out a detailed description of the available solvers.')
 
@@ -646,24 +714,61 @@ def build_arg_parser():
     verbose_meg_parser.set_defaults(clique_merge=False)
 
     input_type_meg_parser = parser.add_mutually_exclusive_group(required=False)
+    input_type_meg_parser.add_argument('--infer-input', dest='input_type', action='store_const', const='infer')
     input_type_meg_parser.add_argument('--matrix-input', dest='input_type', action='store_const', const='matrix')
-    input_type_meg_parser.add_argument('--model-input', dest='input_type', action='store_const', const='model')
+    input_type_meg_parser.add_argument('--mps-input', dest='input_type', action='store_const', const='mps')
     input_type_meg_parser.add_argument('--json-input', dest='input_type', action='store_const', const='json')
+    input_type_meg_parser.add_argument('--lp-input', dest='input_type', action='store_const', const='lp')
     input_type_meg_parser.set_defaults(input_type=None)
 
     return parser
 
+def infer_type(INPUT_FILE_PATH):
+    # First try: Using file extension:
+    file_name, file_ext = os.path.splitext(INPUT_FILE_PATH)
+    if(file_ext == '.mat'):
+        return 'matrix'
+    if(file_ext == '.json'):
+        return 'json'
+    if(file_ext == '.mps'):
+        return 'mps'
+    if(file_ext == '.lp'):
+        return 'lp'
+    
+    # Second try: Using the file contents:
+    with open(INPUT_FILE_PATH) as file:
+        for raw_line in file:
+            line = raw_line.strip()
+            if(line == ''):
+                continue
+            if(line[0] == "{"):
+                return "json"
+            if(re.search("^NAME|^\*", line.upper())):
+                return "mps"
+            if(re.search("^MIN|^MAX|^\\\\", line.upper())):
+                return "lp"
+            else:
+                return "matrix"
+
 def process_args_from_parser(args, default_arguments):
     INPUT_FILE_PATH = args.file[0]
+
+    VERBOSE_PRINT = args.verbose
 
     if(args.input_type):
         INPUT_TYPE = args.input_type
     else:
         INPUT_TYPE = default_arguments["DEFAULT_INPUT_TYPE"]
 
+    if(INPUT_TYPE == "infer"):
+        if(VERBOSE_PRINT):
+            print("Applying file type infer...")
+        INPUT_TYPE = infer_type(INPUT_FILE_PATH)
+        if(VERBOSE_PRINT):
+            print("Type inferred: " + INPUT_TYPE)
+
     PRINT_ZERO_VARS = args.zeros
     PRINT_SOLUTION_LOG = args.log
-    VERBOSE_PRINT = args.verbose
     CHECK_CLIQUE_MERGE = args.clique_merge
 
     if(args.time):
@@ -684,7 +789,10 @@ def process_args_from_parser(args, default_arguments):
             raise ValueError('Did not find solver with the specified name!')
         MODELING_LANGUAGE_NAME = args.modeling_language[0].upper()
     else:
-        MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE"]
+        if(INPUT_TYPE in ['matrix', 'json']):
+            MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE_MAT_JSON"]
+        elif(INPUT_TYPE in ['mps', 'lp']):
+            MODELING_LANGUAGE_NAME = default_arguments["DEFAULT_MODELING_LANGUAGE_LP_MPS"]
 
     if(args.solver):
         if(args.solver[0].upper() not in default_arguments["ACCEPTED_SOLVERS"]):
@@ -723,23 +831,308 @@ def process_args_from_parser(args, default_arguments):
     else:
         NODEFILE_START_SIZE = None
 
-    return (INPUT_FILE_PATH, INPUT_TYPE, PRINT_ZERO_VARS, PRINT_SOLUTION_LOG, VERBOSE_PRINT, 
-        CHECK_CLIQUE_MERGE, TOTAL_SOLVING_TIME, DIGITS_ON_SOLUTION, MODELING_LANGUAGE_NAME, 
-        SOLVER_NAME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, MEMORY_LIMIT, NODEFILE_START_SIZE)
+    if(args.exporting_json_filepath):
+        EXPORT_SOLUTION_JSON = True
+        SOLUTION_JSON_PATH = args.exporting_json_filepath[0]
+    else:
+        EXPORT_SOLUTION_JSON = False
+        SOLUTION_JSON_PATH = None
+
+    if(args.exporting_mps_filepath):
+        EXPORT_MPS_FILE = True
+        MODEL_MPS_EXPORTING_PATH = args.exporting_mps_filepath[0]
+    else:
+        EXPORT_MPS_FILE = False
+        MODEL_MPS_EXPORTING_PATH = None
+
+    if(args.exporting_lp_filepath):
+        EXPORT_LP_FILE = True
+        MODEL_LP_EXPORTING_PATH = args.exporting_lp_filepath[0]
+    else:
+        EXPORT_LP_FILE = False
+        MODEL_LP_EXPORTING_PATH = None
+
+    if(args.exporting_logfile_path):
+        PRINT_SOLUTION_LOG = True
+        EXPORTING_LOGFILE_PATH = args.exporting_logfile_path[0]
+    else:
+        EXPORTING_LOGFILE_PATH = None
+
+    SKIP_SOLVE = args.skip_solve
+
+    parametersTuple = namedtuple('parametersTuple', [
+        "INPUT_FILE_PATH", "INPUT_TYPE", "PRINT_ZERO_VARS", "PRINT_SOLUTION_LOG",
+        "VERBOSE_PRINT", "CHECK_CLIQUE_MERGE", "TOTAL_SOLVING_TIME", "DIGITS_ON_SOLUTION",
+        "MODELING_LANGUAGE_NAME", "SOLVER_NAME", "NUM_THREADS", "RELATIVE_MIP_GAP_VALUE",
+        "MEMORY_LIMIT", "NODEFILE_START_SIZE", "EXPORT_SOLUTION_JSON", "SOLUTION_JSON_PATH",
+        "EXPORT_MPS_FILE", "MODEL_MPS_EXPORTING_PATH", "EXPORT_LP_FILE", "MODEL_LP_EXPORTING_PATH",
+        "EXPORTING_LOGFILE_PATH", "SKIP_SOLVE"
+    ])
+
+    params = parametersTuple(
+        INPUT_FILE_PATH,
+        INPUT_TYPE,
+        PRINT_ZERO_VARS,
+        PRINT_SOLUTION_LOG,
+        VERBOSE_PRINT,
+        CHECK_CLIQUE_MERGE,
+        TOTAL_SOLVING_TIME,
+        DIGITS_ON_SOLUTION,
+        MODELING_LANGUAGE_NAME,
+        SOLVER_NAME,
+        NUM_THREADS,
+        RELATIVE_MIP_GAP_VALUE,
+        MEMORY_LIMIT,
+        NODEFILE_START_SIZE,
+        EXPORT_SOLUTION_JSON,
+        SOLUTION_JSON_PATH,
+        EXPORT_MPS_FILE,
+        MODEL_MPS_EXPORTING_PATH,
+        EXPORT_LP_FILE,
+        MODEL_LP_EXPORTING_PATH,
+        EXPORTING_LOGFILE_PATH,
+        SKIP_SOLVE
+    )
+
+    return params
+
+def export_results_json(solver, status, params):
+    results_json = dict()
+    variables_list = list()
+    status_text = "Unknown"
+    problem_type = "Unknown"
+    DIGITS_TO_ROUND = 10
+    if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
+        GAP_value = abs((solver.Objective().BestBound() - solver.Objective().Value()))/(1e-10 + abs(solver.Objective().Value()))
+        int_vars_bool_list = [var.Integer() for var in solver.variables()]
+        problem_has_int_vars = (True in int_vars_bool_list)
+        problem_has_real_vars = (False in int_vars_bool_list)
+        if(problem_has_int_vars):
+            if(problem_has_real_vars):
+                problem_type = "MILP"
+            else:
+                problem_type = "IP"
+        elif(problem_has_real_vars):
+            problem_type = "LP"
+        if(problem_type == "IP"):
+            if(len([var for var in solver.variables() if var.lb() == 0]) == len(solver.variables())):
+                if(len([var for var in solver.variables() if var.ub() == 1]) == len(solver.variables())):
+                    problem_type = "BP"
+        variables_list = [{
+            "name": var.name(),
+            "type": "int" if var.Integer() else "real",
+            "value": round(var.solution_value(), DIGITS_TO_ROUND),
+            "lb" : var.lb() if var.lb() > -float("inf") else None,
+            "ub" : var.ub() if var.ub() < float("inf") else None
+            } for var in solver.variables()
+        ]
+        if(status == solver.FEASIBLE):
+            status_text = "Feasible"
+        elif(status == solver.INFEASIBLE):
+            status_text = "Infeasible"
+        elif(status == solver.NOT_SOLVED):
+            status_text = "Not Solved"
+        elif(status == solver.OPTIMAL):
+            status_text = "Optimal"
+        elif(status == solver.UNBOUNDED):
+            status_text = "Unbounded"
+        else:
+            status_text = "Unknown"
+        results_json.update({
+            "ObjVal": round(solver.Objective().Value(), DIGITS_TO_ROUND),
+            "Runtime": g_runtime,
+            "Status": status_text,
+            "Type": problem_type,
+            "Solver": params.SOLVER_NAME,
+            "Threads": params.NUM_THREADS,
+        })
+        if(problem_has_int_vars):
+            results_json.update({
+                "GAP": GAP_value,
+                "Nodes": solver.nodes()
+            })
+        results_json.update({
+            "Iterations": solver.iterations(),
+            "Variables": variables_list
+        })
+    elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        var_type_dict = {"B": "bin", "C": "real", "I": "int"}
+        bool_vars_bool_list = [(var_type_dict[var.var_type] == "bin")  for var in solver.vars]
+        int_vars_bool_list = [(var_type_dict[var.var_type] == "int")  for var in solver.vars]
+        real_vars_bool_list = [(var_type_dict[var.var_type] == "real")  for var in solver.vars]
+        problem_has_bool_vars = (True in bool_vars_bool_list)
+        problem_has_int_vars = (True in int_vars_bool_list)
+        problem_has_real_vars = (True in real_vars_bool_list)
+        if(problem_has_real_vars):
+            if(problem_has_int_vars or problem_has_bool_vars):
+                problem_type = "MILP"
+            else:
+                problem_type = "LP"
+        elif(problem_has_bool_vars and (not problem_has_int_vars)):
+            problem_type = "BP"
+        else:
+            problem_type = "IP"
+        variables_list = [{
+            "name": var.name,
+            "type": var_type_dict[var.var_type],
+            "value": round(var.x, DIGITS_TO_ROUND),
+            "lb" : var.lb if var.lb > -1e+300 else None,
+            "ub" : var.ub if var.ub < 1e+300 else None
+            } for var in solver.vars
+        ]
+        if(status == mip.OptimizationStatus.FEASIBLE):
+            status_text = "Feasible"
+        elif(status == mip.OptimizationStatus.INFEASIBLE):
+            status_text = "Infeasible"
+        elif(status == mip.OptimizationStatus.LOADED):
+            status_text = "Not Solved"
+        elif(status == mip.OptimizationStatus.OPTIMAL):
+            status_text = "Optimal"
+        elif(status == mip.OptimizationStatus.UNBOUNDED):
+            status_text = "Unbounded"
+        else:
+            status_text = "Unknown"
+        results_json.update({
+            "ObjVal": round(solver.objective_value, DIGITS_TO_ROUND),
+            "Runtime": g_runtime,
+            "Status": status_text,
+            "Type": problem_type,
+            "Solver": params.SOLVER_NAME,
+            "Threads": params.NUM_THREADS
+        })
+        if(solver.gap < float("inf")):
+            results_json.update({
+                "GAP": solver.gap,
+                #"Nodes": "Unknown"
+            })
+        results_json.update({
+            #"Iterations": -1,
+            "Variables": variables_list
+        })
+    elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
+        var_type_dict = {"B": "bin", "C": "real", "I": "int"}
+        bool_vars_bool_list = [(var_type_dict[var.VType] == "bin")  for var in solver.getVars()]
+        int_vars_bool_list = [(var_type_dict[var.VType] == "int")  for var in solver.getVars()]
+        real_vars_bool_list = [(var_type_dict[var.VType] == "real")  for var in solver.getVars()]
+        problem_has_bool_vars = (True in bool_vars_bool_list)
+        problem_has_int_vars = (True in int_vars_bool_list)
+        problem_has_real_vars = (True in real_vars_bool_list)
+        if(problem_has_real_vars):
+            if(problem_has_int_vars or problem_has_bool_vars):
+                problem_type = "MILP"
+            else:
+                problem_type = "LP"
+        elif(problem_has_bool_vars and (not problem_has_int_vars)):
+            problem_type = "BP"
+        else:
+            problem_type = "IP"
+        variables_list = [{
+            "name": var.VarName,
+            "type": var_type_dict[var.VType],
+            "value": round(var.X, DIGITS_TO_ROUND),
+            "lb": var.LB if var.LB > -float("inf") else None,
+            "ub": var.UB if var.UB < float("inf") else None
+            } for var in solver.getVars()
+        ]
+        if(status == gp.GRB.SUBOPTIMAL):
+            status_text = "Feasible"
+        elif(status == gp.GRB.INFEASIBLE):
+            status_text = "Infeasible"
+        elif(status == gp.GRB.LOADED):
+            status_text = "Not Solved"
+        elif(status == gp.GRB.OPTIMAL):
+            status_text = "Optimal"
+        elif(status == gp.GRB.UNBOUNDED):
+            status_text = "Unbounded"
+        else:
+            status_text = "Unknown"
+        results_json.update({
+            "ObjVal": round(solver.ObjVal, DIGITS_TO_ROUND),
+            "Runtime": g_runtime,
+            "Status": status_text,
+            "Type": problem_type,
+            "Solver": params.SOLVER_NAME,
+            "Threads": params.NUM_THREADS
+        })
+        if(solver.IsMIP):
+            results_json.update({
+                "GAP": solver.MIPGap,
+                "Nodes": solver.NodeCount
+            })
+        results_json.update({
+            "Iterations": solver.IterCount,
+            "Variables": variables_list
+        })
+    else:
+        raise RuntimeError("Problem with input modeling language!")
+
+    json.dump(results_json, open(params.SOLUTION_JSON_PATH, "w"))
+    return 
+
+def export_mps_model(solver, params):
+    if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
+        with open(params.MODEL_MPS_EXPORTING_PATH, "w") as file:
+            file.write(solver.ExportModelAsMpsFormat(False, False))
+    elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        solver.write(params.MODEL_MPS_EXPORTING_PATH)
+    elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
+        solver.write(params.MODEL_MPS_EXPORTING_PATH)
+    else:
+        raise RuntimeError("Problem exporting .mps file!")
+
+def export_lp_model(solver, params):
+    if(params.MODELING_LANGUAGE_NAME == "OR-TOOLS"):
+        with open(params.MODEL_LP_EXPORTING_PATH, "w") as file:
+            file.write(solver.ExportModelAsLpFormat(False))
+    elif(params.MODELING_LANGUAGE_NAME == "PYTHON-MIP"):
+        solver.write(params.MODEL_LP_EXPORTING_PATH)
+    elif(params.MODELING_LANGUAGE_NAME == "GUROBIPY"):
+        solver.write(params.MODEL_LP_EXPORTING_PATH)
+    else:
+        raise RuntimeError("Problem exporting .lp file!")
+
+def print_help_with_solvers_message():
+    print('*****')
+    print("Solve_LP uses the OR-Tools module from Google as modeling language, and so it offers support to different linear optimization solvers.")
+    print("Here we show a brief description of this support, based on the documentation made available by the OR-Tools developers.")
+    print("For more information please refer to the solvers/or-tools documentations.")
+    print()
+    print('*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!')
+    print('*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.')
+    print('*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.')
+    print('*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.')
+    print('*) GLPK: GNU Linear Programming Kit. Requires user license. Free?')
+    print('*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('*) PDLP: Google First Order LP solver (...)')
+    print('*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)')
+    print('*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.')
+    print('*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.')
+    print('Where...')
+    print('BP = Binary Programming (only binary variables);')
+    print('IP = Integer Programming (integer and/or binary variables)')
+    print('LP = Linear Programming (only real variables)')
+    print('MILP = Mixed Integer Linear Programming (real and integer/binary variables).')
+    print()
+    print('General notes:')
+    print('-) Proprietary solvers may have problems to find the license file of the user. Please refer to the OR-Tools documentation to find help setting environment variables to use these solvers;')
+    print('-) MILP solvers may be used to solve LP problems without any difference in the user inputs.')
+    print('*****')
 
 def main():
     # Default solve_lp parameters:
     default_arguments = {
         "ACCEPTED_SOLVERS": ['BOP', 'CBC', 'CLP', 'CPLEX', 'GLOP', 'GLPK', 'GUROBI', 'PDLP', 'SAT', 'SCIP', 'XPRESS'],
         "ACCEPTED_MODELING_LANGUAGES": ['GUROBIPY', 'OR-TOOLS', 'PYTHON-MIP'],
-        "DEFAULT_MODELING_LANGUAGE": 'OR-TOOLS',
+        "DEFAULT_MODELING_LANGUAGE_MAT_JSON": 'OR-TOOLS',
+        "DEFAULT_MODELING_LANGUAGE_LP_MPS": 'PYTHON-MIP',
         "DEFAULT_OR_TOOLS_SOLVER": 'SCIP',
         "DEFAULT_PYTHON_MIP_SOLVER": 'CBC',
         "DEFAULT_SOLVING_TIME":  30,
         "DEFAULT_DIGITS_ON_SOLUTION":  5,
         "DEFAULT_NUM_THREADS": 1,
         "DEFAULT_MIP_GAP": 10**(-5),
-        "DEFAULT_INPUT_TYPE": 'matrix'
+        "DEFAULT_INPUT_TYPE": 'infer'
     }
 
     # Building the argument parser:
@@ -758,91 +1151,136 @@ def main():
         raise RuntimeError('The following argument is required: -f/--file')
 
     # Setting up the solver configs:
-    (INPUT_FILE_PATH, INPUT_TYPE, PRINT_ZERO_VARS, PRINT_SOLUTION_LOG, 
-    VERBOSE_PRINT, CHECK_CLIQUE_MERGE, TOTAL_SOLVING_TIME, DIGITS_ON_SOLUTION, 
-    MODELING_LANGUAGE_NAME, SOLVER_NAME, NUM_THREADS, RELATIVE_MIP_GAP_VALUE, 
-    MEMORY_LIMIT, NODEFILE_START_SIZE) = process_args_from_parser(args, default_arguments)
+    params = process_args_from_parser(args, default_arguments)
 
     # Verbose mode information printing
-    if(VERBOSE_PRINT):
+    if(params.VERBOSE_PRINT):
         print('Solve_LP started!')
         print()
         print('Reading input data file...')
 
-    # Reading the input data:
-    if(INPUT_TYPE == 'json'):
-        (c, b, A, obj_type, leq_constraints, geq_constraints, 
-        bin_vars, int_vars, lb_inputs, ub_inputs) = process_json_input_data(INPUT_FILE_PATH)
-    elif(INPUT_TYPE == 'matrix'):
-        (c, b, A, obj_type, leq_constraints, geq_constraints, 
-        bin_vars, int_vars, lb_inputs, ub_inputs) = process_matrix_input_data(INPUT_FILE_PATH)
-    else:
-        raise RuntimeError('Problem with the input type!')
+    if(params.INPUT_TYPE in ['matrix', 'json']):
+        # Reading the input data:
+        if(params.INPUT_TYPE == 'json'):
+            (c, b, A, obj_type, leq_constraints, geq_constraints, 
+            bin_vars, int_vars, lb_inputs, ub_inputs) = process_json_input_data(params)
+        elif(params.INPUT_TYPE == 'matrix'):
+            (c, b, A, obj_type, leq_constraints, geq_constraints, 
+            bin_vars, int_vars, lb_inputs, ub_inputs) = process_matrix_input_data(params)
+        else:
+            raise RuntimeError('Problem with the input type!')
 
-    # Verbose mode information printing
-    if(VERBOSE_PRINT):
-        print('Data file was read!')
-        print()
-        print('Starting to instantiate the inputed solver ({})...'.format(SOLVER_NAME.upper()))
-        print()
+        # Verbose mode information printing
+        if(params.VERBOSE_PRINT):
+            print('Data file was read!')
+            print()
+            print('Starting to instantiate the inputed solver ({})...'.format(params.SOLVER_NAME.upper()))
+            print()
 
-    # Creating the optimization model and the variables:
-    print('b:')
-    print(b)
-    print('c:')
-    print(c)
-    print('A:')
-    print(A)
-    print('leq:')
-    print(leq_constraints)
-    print('geq:')
-    print(geq_constraints)
-    print('bin:')
-    print(bin_vars)
-    print('int:')
-    print(int_vars)
-    print('obj_type:' + obj_type + "\n")
-    print('ub_inputs:')
-    print(ub_inputs)
-    print('lb_inputs:')
-    print(lb_inputs)
+        # Creating the optimization model and the variables:
+        print('b:')
+        print(b)
+        print(type(b))
+        print('c:')
+        print(c)
+        print(type(c))
+        print('A:')
+        print(A)
+        print(type(A))
+        print('leq:')
+        print(leq_constraints)
+        print('geq:')
+        print(geq_constraints)
+        print('bin:')
+        print(bin_vars)
+        print('int:')
+        print(int_vars)
+        print('obj_type: ' + obj_type + "\n")
+        print('ub_inputs:')
+        print(ub_inputs)
+        print(type(ub_inputs))
+        print('lb_inputs:')
+        print(lb_inputs)
+        print(type(lb_inputs))
 
-    # Verbose mode information printing
-    if(VERBOSE_PRINT):
-        print('Validating data and starting to build the model...')
+        # Verbose mode information printing
+        if(params.VERBOSE_PRINT):
+            print('Validating data and starting to build the model...')
 
-    # Last data processing before build the solver:
-    (A, b, c, m, n, obj_type, var_range, row_range, var_type, 
-    leq_constraints, geq_constraints) = validate_and_build_solving_parameters(
-        A, b, c, obj_type, bin_vars, int_vars, leq_constraints, geq_constraints
-    )
+        # Last data processing before build the solver:
+        (A, b, c, m, n, obj_type, var_range, row_range, var_type, 
+        leq_constraints, geq_constraints) = validate_and_build_solving_parameters(
+            A, b, c, obj_type, bin_vars, int_vars, leq_constraints, geq_constraints
+        )
 
-    if(MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
-        # Solving the model using Google's OR-Tools with the selected solver
-        solver, x, obj, cstr = build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
-            geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
-        status = solve_OR_Tools_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
-            RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG)
-        print_OR_Tools_solution(n, var_range, x, obj_type, solver, status, 
-            DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
-    elif(MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
-        # Solving the model using Python MIP with the selected solver
-        solver, x, obj, cstr = build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
-            geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, SOLVER_NAME)
-        status = solve_Python_MIP_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
-            RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, CHECK_CLIQUE_MERGE)
-        print_Python_MIP_solution(n, var_range, x, obj_type, solver, status, 
-            DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
-    elif(MODELING_LANGUAGE_NAME == 'GUROBIPY'):
-        # Solving the model using Gurobi with its own modeling language
-        solver, x, obj, cstr = build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
-            geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, MEMORY_LIMIT)
-        status = solve_Gurobipy_model(solver, TOTAL_SOLVING_TIME, NUM_THREADS, 
-            RELATIVE_MIP_GAP_VALUE, PRINT_SOLUTION_LOG, NODEFILE_START_SIZE)
-        print_Gurobipy_solution(n, var_range, x, obj_type, solver, status, 
-            DIGITS_ON_SOLUTION, PRINT_ZERO_VARS)
-    else:
-        raise RuntimeError('Problem processing the selected modeling language!')
+        if(params.MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
+            # Solving the model using Google's OR-Tools with the selected solver
+            solver, x, obj, cstr = build_OR_Tools_model(A, b, c, n, var_range, row_range, leq_constraints, 
+                geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
+            if(not params.SKIP_SOLVE):
+                if(params.EXPORTING_LOGFILE_PATH):
+                    out = StringIO()
+                    with pipes(stdout=out, stderr=STDOUT):
+                        status = solve_OR_Tools_model(solver, params)
+                    stdout = out.getvalue()
+                    with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                        f.write(stdout)
+                else:
+                    status = solve_OR_Tools_model(solver, params)
+                print_OR_Tools_solution(solver, status, params)
+        elif(params.MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
+            # Solving the model using Python MIP with the selected solver
+            solver, x, obj, cstr = build_Python_MIP_model(A, b, c, n, var_range, row_range, leq_constraints, 
+                geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
+            if(not params.SKIP_SOLVE):
+                if(params.EXPORTING_LOGFILE_PATH):
+                    out = StringIO()
+                    with pipes(stdout=out, stderr=STDOUT):
+                        status = solve_Python_MIP_model(solver, params)
+                    stdout = out.getvalue()
+                    with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                        f.write(stdout)
+                else:
+                    status = solve_Python_MIP_model(solver, params)
+                print_Python_MIP_solution(solver, status, params)
+        elif(params.MODELING_LANGUAGE_NAME == 'GUROBIPY'):
+            # Solving the model using Gurobi with its own modeling language
+            solver, x, obj, cstr = build_Gurobipy_model(A, b, c, n, var_range, row_range, leq_constraints, 
+                geq_constraints, var_type, obj_type, ub_inputs, lb_inputs, params)
+            if(not params.SKIP_SOLVE):
+                status = solve_Gurobipy_model(solver, params)
+                print_Gurobipy_solution(solver, status, params)
+        else:
+            raise RuntimeError('Problem processing the selected modeling language!')
+    elif(params.INPUT_TYPE in ['mps', 'lp']):
+        solver = process_mps_or_lp_input_model(params)
+        if(params.MODELING_LANGUAGE_NAME == 'OR-TOOLS'):
+            pass
+        if(params.MODELING_LANGUAGE_NAME == 'PYTHON-MIP'):
+            if(not params.SKIP_SOLVE):
+                if(params.EXPORTING_LOGFILE_PATH):
+                    out = StringIO()
+                    with pipes(stdout=out, stderr=STDOUT):
+                        status = solve_Python_MIP_model(solver, params)
+                    stdout = out.getvalue()
+                    with open(params.EXPORTING_LOGFILE_PATH, "w") as f:
+                        f.write(stdout)
+                else:
+                    status = solve_Python_MIP_model(solver, params)
+                print_Python_MIP_solution(solver, status, params)
+        if(params.MODELING_LANGUAGE_NAME == 'GUROBIPY'):
+            if(not params.SKIP_SOLVE):
+                status = solve_Gurobipy_model(solver, params)
+                print_Gurobipy_solution(solver, status, params)
+
+    if(params.EXPORT_SOLUTION_JSON):
+        export_results_json(solver, status, params)
+
+    if(params.EXPORT_MPS_FILE):
+        export_mps_model(solver, params)
+
+    if(params.EXPORT_LP_FILE):
+        export_lp_model(solver, params)
 
     print('END OF FILE!')
 
