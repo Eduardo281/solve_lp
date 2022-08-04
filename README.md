@@ -2,12 +2,31 @@
 ## A CLI to solve Linear Programming Problems
 
 ### Introduction
-`Solve_LP` is a CLI (Command Line Interface) developed to be an <strong>easy</strong> tool to solve Linear Programming Problems (real, integer or mixed-integer). Since it is fully implemented in Python, `Solve_LP` is Operational System independent,that is, any device having a Python interpreter installed can run it in its terminal.
+`Solve_LP` is a CLI (Command Line Interface) developed to be an <strong>easy</strong> tool to solve Linear Programming Problems (real, integer or mixed-integer). Since it is fully implemented in Python, `Solve_LP` is Operational System independent, that is, any device having a Python interpreter installed can run it in its terminal.
 
 <strong>IMPORTANT NOTE:</strong> In this <strong>Readme</strong> file we present its basic usage and a summary of possible arguments. For a complete usage guide, please refer to the <strong>User Guide</strong> available in this repository.
 
+Before we begin, we should emphasize that `Solve_LP`:
+
+<ul>
+    <li> It's <strong>NOT</strong> a modeling language;</li>
+    <li> It's <strong>NOT</strong> a MILP solver;</li>
+</ul>
+
+In fact, `Solve_LP` it's a tool developed to solve MILP problems by calling common powerful modeling languages/linear programming solvers through simple command line instructions.
+
 ### Basic Usage
-STANDARD LINEAR PROGRAMMING (...)
+`Solve_LP` works based on the matricial representation of a Linear Programming problem, where:
+
+$\bullet$ $x$ represents the decision variables;
+
+$\bullet$ $c$ represents the costs vector;
+
+$\bullet$ $b$ represents the resources vector (a.k.a. the RHS - Right Hand Side - vector);
+
+$\bullet$ $A$ represents the (...)
+
+In which follows, it's considered as a linear programming problem in <i>standard format</i> a minimization problem where all the constraints are equalities and all the variables are greater than zero and do not have any upper bound, what can be denoted by:
 
 $$
     \begin{array}{llc}
@@ -17,7 +36,17 @@ $$
     \end{array}
 $$
 
-FIRST EXAMPLE:
+To better describe the basics about how to use `Solve_LP`, we will start by defining our first example, which is a simple real linear programming problem in standar format. Problems including other kinds of constraints, considering integer variables and setting up solving parameters will be discussed ahead.
+
+
+<div style="display: flex; justify-content: space-between">
+    <span>
+        LEFT TEXT
+    </span>
+    <span>
+        RIGHT TEXT
+    </span>
+</div>
 
 $$
     \begin{array}{llrcrcrcrcrcr}
@@ -33,6 +62,8 @@ $$
     \end{array}
 $$
 
+
+
 SOLUTION /\
 
 $$x_1 = 0, x_2 = \frac{20}{3}, x_3 = 0, x_4 = 2, x_5 = \frac{2}{3}$$
@@ -40,9 +71,9 @@ $$x_1 = 0, x_2 = \frac{20}{3}, x_3 = 0, x_4 = 2, x_5 = \frac{2}{3}$$
 OTHER COMMON FORMAT:
 $$
     \begin{array}{llc}
-        \max & & c^T x \\
+        \max                & & c^T x          \\
         \operatorname{s.t.} & & Ax \leqslant b \\
-        & & x \geqslant 0
+                            & & x \geqslant 0
     \end{array}
 $$
 
@@ -58,6 +89,6 @@ $$
 $$ 
 $$
     \begin{array}{c}
-    x_1, ..., x_5 \geqslant 0
+    x_1, ..., x_4 \geqslant 0
     \end{array}
 $$
