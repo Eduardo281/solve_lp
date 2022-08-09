@@ -30,24 +30,17 @@ In which follows, it's considered as a linear programming problem in <i>standard
 
 $$
     \begin{array}{llc}
-        \min & & c^T x \\
+        \min                & &  c^T x \\
         \operatorname{s.t.} & & Ax = b \\
-        & & x \geqslant 0
+                            & &  x \geqslant 0
     \end{array}
 $$
 
 To better describe the basics about how to use `Solve_LP`, we will start by defining our first example, which is a simple real linear programming problem in standar format. Problems including other kinds of constraints, considering integer variables and setting up solving parameters will be discussed ahead.
 
-
-<div style="display: flex; justify-content: space-between">
-    <span>
-        LEFT TEXT
-    </span>
-    <span>
-        RIGHT TEXT
-    </span>
-</div>
-
+$$
+    \text{Problem \textbf{(LP1)}:}
+$$
 $$
     \begin{array}{llrcrcrcrcrcr}
     \min                & & 7x_1 & + & 9x_2 & + & 8x_3 & + & 5x_4 & + & 4x_5 &   &    \\
@@ -62,20 +55,28 @@ $$
     \end{array}
 $$
 
-
-
-SOLUTION /\
+It is not hard to solve <b>(LP1)</b> to optimality and find that its optimal value is:
 
 $$x_1 = 0, x_2 = \frac{20}{3}, x_3 = 0, x_4 = 2, x_5 = \frac{2}{3}$$
+
+Our first goal is to see how to input this problem in `Solve_LP`. 
+
+### The 4 file formats used in Solve_LP
+
+<b>The matricial format (.mat)</b>
+
+(...)
+
 
 OTHER COMMON FORMAT:
 $$
     \begin{array}{llc}
-        \max                & & c^T x          \\
+        \max                & &  c^T x \\
         \operatorname{s.t.} & & Ax \leqslant b \\
-                            & & x \geqslant 0
+                            & &  x \geqslant 0
     \end{array}
 $$
+
 
 SECOND EXAMPLE:
 
