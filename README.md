@@ -28,13 +28,28 @@ $\bullet$ $A$ represents the (...)
 
 In which follows, it's considered as a linear programming problem in <i>standard format</i> a minimization problem where all the constraints are equalities and all the variables are greater than zero and do not have any upper bound, what can be denoted by:
 
-$$
-    \begin{array}{llc}
-        \min                & &  c^T x \\
-        \operatorname{s.t.} & & Ax = b \\
-                            & &  x \geqslant 0
-    \end{array}
-$$
+<div style="display: flex; justify-content: space-around; align-items: center" >
+    <table border="0">
+        <tr>
+            <td align="left">   min             </td>
+            <td align="left">                   </td>
+            <td align="center"> c<sup>T</sup> x </td>
+        </tr>
+        <tr>
+            <td align="left">   s.t.      </td>
+            <td align="left">             </td>
+            <td align="center"> Ax &#61 b </td>
+        </tr>
+        <tr>
+            <td align="left">              </td>
+            <td align="left">              </td>
+            <td align="center"> x &#8805 0 </td>
+        </tr>
+    </table>
+    <div>
+        (STD-LP)
+    </div>
+</div>
 
 To better describe the basics about how to use `Solve_LP`, we will start by defining our first example, which is a simple real linear programming problem in standar format. Problems including other kinds of constraints, considering integer variables and setting up solving parameters will be discussed ahead.
 
