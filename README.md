@@ -1,7 +1,9 @@
 # Solve_lp
+
 ## A CLI to solve Linear Programming Problems
 
 ### Introduction
+
 `Solve_LP` is a CLI (Command Line Interface) developed to be an <strong>easy</strong> tool to solve Linear Programming Problems (real, integer or mixed-integer). Since it is fully implemented in Python, `Solve_LP` is Operational System independent, that is, any device having a Python interpreter installed can run it in its terminal.
 
 <strong>IMPORTANT NOTE:</strong> In this <strong>Readme</strong> file we present its basic usage and a summary of possible arguments. For a complete usage guide, please refer to the <strong>User Guide</strong> available in this repository.
@@ -16,6 +18,7 @@ Before we begin, we should emphasize that `Solve_LP`:
 In fact, `Solve_LP` it's a tool developed to solve MILP problems by calling common powerful modeling languages/linear programming solvers through simple command line instructions.
 
 ### Basic Usage
+
 `Solve_LP` works based on the matricial representation of a Linear Programming problem, where:
 
 $\bullet$ $x$ represents the decision variables;
@@ -63,7 +66,7 @@ $$
                         & & 4x_1 & + & 8x_2 & + & 3x_3 & + & 4x_4 & + & 1x_5 & = & 62 \\
                         & & 8x_1 & + & 5x_2 & + & 5x_3 & + & 4x_4 & + & 7x_5 & = & 46
     \end{array}
-$$ 
+$$
 $$
     \begin{array}{c}
     x_1, ..., x_5 \geqslant 0
@@ -92,7 +95,6 @@ $$
     \end{array}
 $$
 
-
 SECOND EXAMPLE:
 
 $$
@@ -102,7 +104,7 @@ $$
                         & & 56x_1 & + & 61x_2 & + & 60x_3 & + & 59x_4 &  \leqslant & 112 \\
                         & &  5x_1 & + &  6x_2 & + &  7x_3 & + &  9x_4 &  \leqslant & 20
     \end{array}
-$$ 
+$$
 $$
     \begin{array}{c}
     x_1, ..., x_4 \geqslant 0
