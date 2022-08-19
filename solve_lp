@@ -378,8 +378,7 @@ params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
             x[j] = solver.add_var(var_type=mip.INTEGER, lb=lb_inputs[j-1], ub=ub_inputs[j-1], name='x[{}]'.format(j))
 
     # Objective Function
-    solver.objective = mip.xsum(c[j] * x[j] for j in var_range)
-    obj = solver.objective
+    obj = solver.objective = mip.xsum(c[j] * x[j] for j in var_range)
 
     # Adding the constraints sets:
     cstr = dict()
