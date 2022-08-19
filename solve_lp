@@ -124,8 +124,6 @@ params: Tuple) -> Tuple[pywraplp.Solver, dict, pywraplp.Objective, dict]:
 def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
     # Solving the problem and passing the total runtime to g_runtime:
     global g_runtime
-    if(params.EXPORTING_LOGFILE_PATH):
-        pass #TODO
     if(params.TOTAL_SOLVING_TIME > 0):
         solver.set_time_limit(params.TOTAL_SOLVING_TIME * 1000)
     if(params.PRINT_SOLUTION_LOG):
