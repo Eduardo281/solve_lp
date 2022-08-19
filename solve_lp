@@ -19,8 +19,10 @@ import numpy as np
 
 from wurlitzer import pipes, STDOUT
 
+# Global runtime variable
 g_runtime = 0
 
+# Default arguments used by Solve_LP
 class DefaultArgumentsTuple(NamedTuple):
     ACCEPTED_SOLVERS: list=["BOP", "CBC", "CLP", "CPLEX", "GLOP", "GLPK", "GUROBI", "PDLP", "SAT", "SCIP", "XPRESS"]
     ACCEPTED_MODELING_LANGUAGES: list=["GUROBIPY", "OR-TOOLS", "PYTHON-MIP"]
@@ -34,6 +36,7 @@ class DefaultArgumentsTuple(NamedTuple):
     DEFAULT_MIP_GAP: float=10**(-5)
     DEFAULT_INPUT_TYPE: str="infer"
 
+# Class to store the parameters set:
 class ParametersTuple(NamedTuple):
     INPUT_FILE_PATH: str
     INPUT_TYPE: str
@@ -142,12 +145,14 @@ def solve_OR_Tools_model(solver: pywraplp.Solver, params: Tuple) -> int:
     return status
 
 def print_OR_Tools_solution(solver: pywraplp.Solver, status: int, params: Tuple) -> None:
+    # Printing variables defined:
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.variables():
         print(f'{var.name()}', end=' ')
     print('\n]')
 
+    # Printing objective function type:
     if(solver.Objective().minimization()):
         obj_type = 'MIN'
     elif(solver.Objective().maximization()):
@@ -156,6 +161,8 @@ def print_OR_Tools_solution(solver: pywraplp.Solver, status: int, params: Tuple)
         raise RuntimeError('Problem in printing the objective function type!')
 
     print('Objective function being considered: {}'.format(obj_type.upper()))
+
+    # Printing results:
     if((status == solver.FEASIBLE) or (status == solver.OPTIMAL)):
         ObjVal = solver.Objective().Value()
         print('Objective found with value: {}'.format(round(ObjVal, params.DIGITS_ON_SOLUTION)))
@@ -180,6 +187,7 @@ def build_Gurobipy_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int,
 var_range: range, row_range: range, leq_constraints: list, geq_constraints:list, 
 var_type: dict, obj_type: str, ub_inputs: np.ndarray, lb_inputs: np.ndarray, 
 params: Tuple) -> Tuple[gp.Model, dict, None, dict]:
+    # Defining memory limit (if set):
     if(params.MEMORY_LIMIT):
         env = gp.Env(empty=True)
         env.setParam("MemLimit", params.MEMORY_LIMIT)
@@ -278,12 +286,14 @@ def solve_Gurobipy_model(solver: gp.Model, params: Tuple) -> int:
     return solver.Status
 
 def print_Gurobipy_solution(solver: gp.Model, status: int, params: Tuple) -> None:
+    # Printing variables defined:
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.getVars():
         print(f'{var.VarName}', end=' ')
     print('\n]')
 
+    # Printing objective function type:
     if(solver.ModelSense == gp.GRB.MINIMIZE):
         obj_type = 'MIN'
     elif(solver.ModelSense == gp.GRB.MAXIMIZE):
@@ -292,6 +302,8 @@ def print_Gurobipy_solution(solver: gp.Model, status: int, params: Tuple) -> Non
         raise RuntimeError('Problem in printing the objective function type!')
 
     print('Objective function being considered: {}'.format(obj_type.upper()))
+
+    # Printing results:
     if((status == gp.GRB.SUBOPTIMAL) or (status == gp.GRB.OPTIMAL)):
         ObjVal = solver.ObjVal
         print('Objective found with value: {}'.format(round(ObjVal, params.DIGITS_ON_SOLUTION)))
@@ -413,16 +425,19 @@ def solve_Python_MIP_model(solver: mip.model.Model, params: Tuple) -> mip.Optimi
     return status
 
 def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus, params: Tuple) -> None:
+    # Printing variables defined:
     print('Variables defined: [ ')
     print('    ', end='')
     for var in solver.vars:
         print(f'{var.name}', end=' ')
     print('\n]')
 
+    # Printing objective function type:
     obj_type = solver.sense
 
     print('Objective function being considered: {}'.format(obj_type.upper()))
 
+    # Printing results:
     if((status == mip.OptimizationStatus.FEASIBLE) or (status == mip.OptimizationStatus.OPTIMAL)):
         ObjVal = solver.objective_value
         print('Objective found with value: {}'.format(round(ObjVal, params.DIGITS_ON_SOLUTION)))
@@ -446,17 +461,19 @@ def print_Python_MIP_solution(solver: mip.Model, status: mip.OptimizationStatus,
     return status
 
 def build_empty_parameters() -> Tuple[str, str, str, str, str, str, str]:
-    leq_constraints = '*EMPTY*'
-    geq_constraints = '*EMPTY*'
-    bin_vars = '*EMPTY*'
-    int_vars = '*EMPTY*'
-    obj_type = '*EMPTY*'
-    ub_inputs = '*EMPTY*'
-    lb_inputs = '*EMPTY*'
+    # Initial empty values for the matrix and json input reader codes:
+    leq_constraints = "*EMPTY*"
+    geq_constraints = "*EMPTY*"
+    bin_vars        = "*EMPTY*"
+    int_vars        = "*EMPTY*"
+    obj_type        = "*EMPTY*"
+    ub_inputs       = "*EMPTY*"
+    lb_inputs       = "*EMPTY*"
 
     return (obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs)
 
 def process_matrix_input_data(params: ParametersTuple):
+    # Setting up initial empty parameters:
     c = list()
     b = list()
     A = list()
@@ -490,6 +507,7 @@ def process_matrix_input_data(params: ParametersTuple):
             values = np.array(values, dtype=float)
         return values
 
+    # Reading input file line-by-line:
     present_A_line = 0
     scanning_A_matrix = False
     with open(params.INPUT_FILE_PATH) as file:
@@ -576,6 +594,7 @@ def process_matrix_input_data(params: ParametersTuple):
                 int_vars = read_range_friendly_input_format(line)
                 continue
 
+    # "A", "b" and "c" are returned as np.arrays:
     c = np.array(c, dtype=float)
     b = np.array(b, dtype=float)
     A = np.array(A, dtype=float)
@@ -583,38 +602,58 @@ def process_matrix_input_data(params: ParametersTuple):
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
 def process_json_input_data(params: ParametersTuple):
+    # Reading the input file:
     with open(params.INPUT_FILE_PATH) as file:
         data_json = json.load(file)
+
+    # "A", "b" and "c" are returned as np.arrays:
     b = np.array(data_json['b'], dtype=float)
     c = np.array(data_json['c'], dtype=float)
     A = np.array(data_json['A'], dtype=float)
+
+    # Setting up initial empty parameters:
     obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs = build_empty_parameters()
+
+    # Reading the obj input line:
     if('obj' in data_json.keys()):
         obj_type = data_json['obj']
+
+    # Reading the leq input line:
     if('leq' in data_json.keys()):
         if(data_json['leq'] == [-1]):
             leq_constraints = '*'
         else:
             leq_constraints = data_json['leq']
+
+    # Reading the geq input line:
     if('geq' in data_json.keys()):
         if(data_json['geq'] == [-1]):
             geq_constraints = '*'
         else:
             geq_constraints = data_json['geq']
+
+    # Reading the bin input line:
     if('bin' in data_json.keys()):
         if(data_json['bin'] == [-1]):
             bin_vars = '*'
         else:
             bin_vars = data_json['bin']
+
+    # Reading the int input line:
     if('int' in data_json.keys()):
         if(data_json['int'] == [-1]):
             int_vars = '*'
         else:
             int_vars = data_json['int']
+
+    # Reading the ub input line:
     if('ub' in data_json.keys()):
         ub_inputs = data_json['ub']
+
+    # Reading the lb input line:
     if('lb' in data_json.keys()):
         lb_inputs = data_json['lb']
+
     return c, b, A, obj_type, leq_constraints, geq_constraints, bin_vars, int_vars, lb_inputs, ub_inputs
 
 def process_mps_or_lp_input_model(params: ParametersTuple):
