@@ -56,10 +56,10 @@ class ParametersTuple(NamedTuple):
     SOLUTION_JSON_PATH:       str
     EXPORT_MPS_FILE:          bool
     MODEL_MPS_EXPORTING_PATH: str
-    EXPORT_LP_FILE: bool
-    MODEL_LP_EXPORTING_PATH: str
-    EXPORTING_LOGFILE_PATH: str
-    SKIP_SOLVE: bool
+    EXPORT_LP_FILE:           bool
+    MODEL_LP_EXPORTING_PATH:  str
+    EXPORTING_LOGFILE_PATH:   str
+    SKIP_SOLVE:               bool
 
 def build_OR_Tools_model(A: np.ndarray, b: np.ndarray, c: np.ndarray, n: int, 
 var_range: range, row_range: range, leq_constraints: list, geq_constraints: list, 
