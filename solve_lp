@@ -38,23 +38,23 @@ class DefaultArgumentsTuple(NamedTuple):
 
 # Class to store the parameters set:
 class ParametersTuple(NamedTuple):
-    INPUT_FILE_PATH: str
-    INPUT_TYPE: str
-    PRINT_ZERO_VARS: bool
-    PRINT_SOLUTION_LOG: bool
-    VERBOSE_PRINT: bool
-    CHECK_CLIQUE_MERGE: bool
-    TOTAL_SOLVING_TIME: float
-    DIGITS_ON_SOLUTION: int
-    MODELING_LANGUAGE_NAME: str
-    SOLVER_NAME: str
-    NUM_THREADS: int
-    RELATIVE_MIP_GAP_VALUE: float
-    MEMORY_LIMIT: float
-    NODEFILE_START_SIZE: float
-    EXPORT_SOLUTION_JSON: bool
-    SOLUTION_JSON_PATH: str
-    EXPORT_MPS_FILE: bool
+    INPUT_FILE_PATH:          str
+    INPUT_TYPE:               str
+    PRINT_ZERO_VARS:          bool
+    PRINT_SOLUTION_LOG:       bool
+    VERBOSE_PRINT:            bool
+    CHECK_CLIQUE_MERGE:       bool
+    TOTAL_SOLVING_TIME:       float
+    DIGITS_ON_SOLUTION:       int
+    MODELING_LANGUAGE_NAME:   str
+    SOLVER_NAME:              str
+    NUM_THREADS:              int
+    RELATIVE_MIP_GAP_VALUE:   float
+    MEMORY_LIMIT:             float
+    NODEFILE_START_SIZE:      float
+    EXPORT_SOLUTION_JSON:     bool
+    SOLUTION_JSON_PATH:       str
+    EXPORT_MPS_FILE:          bool
     MODEL_MPS_EXPORTING_PATH: str
     EXPORT_LP_FILE: bool
     MODEL_LP_EXPORTING_PATH: str
