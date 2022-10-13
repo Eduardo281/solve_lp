@@ -1225,7 +1225,7 @@ def main():
         if(params.VERBOSE_PRINT):
             print('Data file was read!')
             print()
-            print('Starting to instantiate the inputed solver ({})...'.format(params.SOLVER_NAME.upper()))
+            print('Starting to instantiate the solver ({})...'.format(params.SOLVER_NAME.upper()))
             print()
 
         # Verbose mode information printing
