@@ -1,6 +1,6 @@
-0) Finish the "cleaning the code" stage!: [OK!]
+0) Finish the "cleaning the code" stage!: [OK!];
 
-        || 1) Add the MPS reader functionality; [OK!]
+        || 1) Add the MPS reader functionality; [OK!];
         || 
 INPUTS  || 2) Define what will be the type of the matrix inputs (.mat?) [OK!];
 BRANCH  || 
@@ -8,9 +8,9 @@ BRANCH  ||
         ||     -> First criteria: Input file extension [OK!];
         ||     -> Second criteria: Try-and-error reading the data [OK!];
 
-        || 4) Define how a json-output file would looks like [OK!]
+        || 4) Define how a json-output file would looks like [OK!];
         || 
-EXPORT  || 5) Add the json-export functionality [OK!]
+EXPORT  || 5) Add the json-export functionality [OK!];
 BRANCH  || 
         || 6.1) Add the mps-export functionality (to convert models from other input styles) [OK!];
         ||
@@ -18,13 +18,13 @@ BRANCH  ||
         || 
         || 7) Add the non-solve functionality (to only convert models and not to solve) [OK!];
         ||
-        || ~EXTRA~) Add the "export log file" functionality [OK!]
+        || ~EXTRA~) Add the "export log file" functionality [OK!].
 
-              || 8) Finish to add the comments inside the functions
+              || 8) Finish to add the comments inside the functions [[[PARTIAL!]]];
               || 
-              || 9) Finish the README.md file;
+              || 9) Finish the README.md file [[[PARTIAL!]]];
 DOCUMENTATION || 
-BRANCH        || 10) Finish the User_Guide.pdf file;
+BRANCH        || 10) Finish the User_Guide.pdf file [[[PARTIAL!]]];
               || 
               || 11) Finish the index.html file;
               || 
@@ -32,7 +32,7 @@ BRANCH        || 10) Finish the User_Guide.pdf file;
               || 
               || 12.2) Add any license note when calling solve_lp or in any part of the help?
               ||
-              || ~EXTRA~) Add type hints to the functions [[[PARTIAL!]]]
+              || ~EXTRA~) Add type hints to the functions. [[[PARTIAL!]]]
 
 *** Finally: Change the repository to public instead of private. ***
 
