@@ -598,6 +598,63 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 		solve_lp --file DATA.lp --export-logfile LOGFILE.log
 	\end{verbatim}
 
+	{\color{mordantred19}
+	\begin{verbatim}
+		--matrix-input
+	\end{verbatim}
+	} Tells \SolveLP to assume the input data file is in .mat format.
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.mat --matrix-input
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--json-input
+	\end{verbatim}
+	} Tells \SolveLP to assume the input data file is in .json format.
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.json --json-input
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--mps-input
+	\end{verbatim}
+	} Tells \SolveLP to assume the input data file is in .mps format.
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.mps --mps-input
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--lp-input
+	\end{verbatim}
+	} Tells \SolveLP to assume the input data file is in .lp format.
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.lp --lp-input
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--infer-input
+	\end{verbatim}
+	} \SolveLP can analyze the input file and try to detect its format without the need of indicating it explicitly. This process can lead to a few slower data reading process, but it is a good option in general cases.
+
+	\textbf{Important Note:} Although \SolveLP can recognize .mps and .lp files, the optimization solver only solve these types of files if they have the right file extension. In other words, if the user input an mps file named ``my\_data'' to \SolveLP, it will recognize it is a .mps file, but the optimization solver will not solve it because it was not able to identify it. The user should rename it to ``my\_data.mps''.
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.mat --infer-input
+	\end{verbatim}
+
 
 
 	\subsection{Terminology to Know}
