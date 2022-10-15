@@ -552,6 +552,53 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 		solve_lp --file DATA_FILE.mps --time 30 --no-verbose --no-zeros
 	\end{verbatim}
 
+	{\color{mordantred19}
+	\begin{verbatim}
+		--export-solution-json JSON_FILEPATH
+	\end{verbatim}
+	} \SolveLP offers the option of exporting the solving results in a .json file through the command \texttt{export-solution-json}.
+	
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA.mat --export-solution-json SOLUTION.json
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--export-mps-model MPS_FILEPATH
+	\end{verbatim}
+	} Used to export the input model in a .mps file.
+	
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA.mat --export-mps-model MODELFILE.mps
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--export-lp-model LP_FILEPATH
+	\end{verbatim}
+	} Used to export the input model in a .lp file.
+	
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA.mat --export-lp-model MODELFILE.lp
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--export-logfile LOGFILE_PATH
+	\end{verbatim}
+	} Used to export the solver log in a text file. There is not standard format to this file, but we suggest to use .log as file type.
+
+	\textbf{Important Note:} This functionality was implemented by re-directing the solver log output to the logfile ``manually''. By the time this manual was written we did not find any error in this process, but we still cannot ensure it is error-free.
+	
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA.lp --export-logfile LOGFILE.log
+	\end{verbatim}
+
+
 
 	\subsection{Terminology to Know}
 			\begin{itemize}
@@ -569,6 +616,7 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Using \SolveLP}
+\label{section:formats}
 \vspace{10.5cm}
 	\subsection{First Example}
 		\SolveLP receives as input the matricial representation of a Linear Programming Problem, following the notations:
