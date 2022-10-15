@@ -507,6 +507,42 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 
 	{\color{mordantred19}
 	\begin{verbatim}
+		--zeros/--no-zeros
+	\end{verbatim}
+	} The command \texttt{zeros} is used to display all the variables in the final result, even the ones that have zero value. In cases the expected result is mostly made of zero values, the user can use \texttt{no-zeros} to avoid an unnecessarily large result print.
+	
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.mat --time 300 --zeros
+		solve_lp --file DATA_FILE.lp --solver SCIP --no-zeros
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--log/--no-log
+	\end{verbatim}
+	} Optimization solvers commonly offer the option of printing a log of the solution procedure. The commands \texttt{log} and \texttt{no-log} are used to control if the user want to see this log or not.
+	
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.mat --time 900 --solver CBC --log
+		solve_lp --file DATA_FILE.lp --modeling-language GUROBIPY --no-log
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--verbose/--no-verbose
+	\end{verbatim}
+	} The pair of commands \texttt{verbose} and \texttt{no-verbose} are used to show or not to show the \SolveLP solving process steps log. We emphasize this is not the solver log, but a small log of the steps described by \SolveLP as it read the input data file, process it and solve the input problem.
+	
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA_FILE.json --verbose --no-log
+		solve_lp --file DATA_FILE.mps --time 30 --no-verbose --no-zeros
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
 		--modeling-language
 	\end{verbatim}
 	} Used to specify which modeling language will be used by \SolveLP among the ones available, which we describe in a later section. Each modeling language have its own pros and cons, and sometimes this will not have any impact on the overall solution process. Experienced users may find this useful to test/apply some particular aspect of his/her favorite modeling language.
