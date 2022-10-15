@@ -655,6 +655,17 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 		solve_lp --file DATA_FILE.mat --infer-input
 	\end{verbatim}
 
+	{\color{mordantred19}
+	\begin{verbatim}
+		--skip-solve
+	\end{verbatim}
+	} Used to only read the input data and execute model export commands, but not to solve the problem. Useful to perform conversions between different model formats
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA.mat --skip-solve --export-mps-model MODELFILE.mps
+	\end{verbatim}
+
 
 
 	\subsection{Terminology to Know}
@@ -673,7 +684,7 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Using \SolveLP}
-\label{section:formats}
+\label{section:usage}
 \vspace{10.5cm}
 	\subsection{First Example}
 		\SolveLP receives as input the matricial representation of a Linear Programming Problem, following the notations:
