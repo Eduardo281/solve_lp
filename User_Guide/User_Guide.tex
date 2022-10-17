@@ -666,6 +666,29 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 		solve_lp --file DATA.mat --skip-solve --export-mps-model MODELFILE.mps
 	\end{verbatim}
 
+	{\color{mordantred19}
+	\begin{verbatim}
+		--memory-limit MEMORY_LIMIT_IN_GB
+	\end{verbatim}
+	} Allows to impose a limit on the total amount of memory available to the solving process. Can only be used when the modeling language is set to GUROBIPY.
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA.mat --modeling-language GUROBIPY --memory-limit 6
+	\end{verbatim}
+
+	{\color{mordantred19}
+	\begin{verbatim}
+		--nodefile-start-size NODEFILE_START_SIZE_IN_GB
+	\end{verbatim}
+	} Used to store the branch-and-cut tree nodes compressed in the disk, as an way to reduce RAM memory usage. When the total of memory used by the solver reaches the impose limit value, the solver starts to written the nodes to the disk. Can only be used when the modeling language is set to GUROBIPY
+
+	\textbf{Usage example:} 
+	\begin{verbatim}
+		solve_lp --file DATA.mat --modeling-language GUROBIPY
+		--nodefile-start-size 0.5
+	\end{verbatim}
+
 
 
 	\subsection{Terminology to Know}
