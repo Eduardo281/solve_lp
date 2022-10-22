@@ -748,41 +748,44 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 \section{Solvers and Modeling Languages}
 \vspace{10.5cm}
 	\subsection{Modeling Languages}
-			In its present version \SolveLP can process the input data using three different modeling languages:
-			\begin{itemize}
-				\item OR-Tools: Open source project developed by Google that allows to solve continuous linear programming problems, as well as integer/mixed integer linear programming problems, constraint programming problems and includes some specialized solvers for some classic problems. In the case of \SolveLP, we only use its linear programming capabilities.
-				\item Gurobipy: Modeling language developed by the Gurobi Optimization to be used along with the Gurobi Optimizer. It allows to model continuous and mixed integer linear and quadratic programming problems. In this project we are only interested in the linear programming features.
-				\item Python-MIP: Open source modeling language developed as an academic initiative on Brazil that became part of the COIN-OR Foundation in 2019. Compatible with PyPy and with support to two important linear programming solvers, it is one of the options available on \SolveLP.
-			\end{itemize}
-			The user interested in read more about the modeling languages may find the following links useful:
+		In its present version \SolveLP can process the input data using three different modeling languages:
+		\begin{itemize}
+			\item OR-Tools: Open source project developed by Google that allows to solve continuous linear programming problems, as well as integer/mixed integer linear programming problems, constraint programming problems and includes some specialized solvers for some classic problems. In the case of \SolveLP, we only use its linear programming capabilities.
+			\item Gurobipy: Modeling language developed by the Gurobi Optimization to be used along with the Gurobi Optimizer. It allows to model continuous and mixed integer linear and quadratic programming problems. In this project we are only interested in the linear programming features.
+			\item Python-MIP: Open source modeling language developed as an academic initiative on Brazil that became part of the COIN-OR Foundation in 2019. Compatible with PyPy and with support to two important linear programming solvers, it is one of the options available on \SolveLP.
+		\end{itemize}
+		The user interested in read more about the modeling languages may find the following links useful:
 
-			$\bullet$ \url{https://developers.google.com/optimization}
+		$\bullet$ \url{https://developers.google.com/optimization}
 
-			Google developers page for OR-Tools.
+		Google developers page for OR-Tools.
 
-			$\bullet$ \url{https://github.com/google/or-tools}
+		$\bullet$ \url{https://github.com/google/or-tools}
 
-			OR-Tools's GitHub page.
+		OR-Tools's GitHub page.
 
-			$\bullet$ \url{https://en.wikipedia.org/wiki/OR-Tools}
+		$\bullet$ \url{https://en.wikipedia.org/wiki/OR-Tools}
 
-			OR-Tools's Wikipedia page.
+		OR-Tools's Wikipedia page.
 
-			$\bullet$ \url{https://www.gurobi.com/}
+		$\bullet$ \url{https://www.gurobi.com/}
 
-			Gurobi official website.
+		Gurobi official website.
 
-			$\bullet$ \url{https://github.com/Gurobi}
+		$\bullet$ \url{https://github.com/Gurobi}
 
-			Gurobi's GitHub profile.
+		Gurobi's GitHub profile.
 
-			$\bullet$ \url{https://www.python-mip.com/}
+		$\bullet$ \url{https://www.python-mip.com/}
 
-			Python-MIP's official page.
+		Python-MIP's official page.
 
-			$\bullet$ \url{https://github.com/coin-or/python-mip}
+		$\bullet$ \url{https://github.com/coin-or/python-mip}
 
-			Python-MIP's GitHub page.	
+		Python-MIP's GitHub page.
+
+	\subsection{Available Solvers}
+
 
 	\subsection{Normal Classes}
 			For situations when you do not want to use one of the pre-created/defined classes, you can begin your document with \cs{documentclass\brackets{"type of document"}}.
