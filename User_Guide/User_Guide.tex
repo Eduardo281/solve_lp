@@ -754,6 +754,8 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 			\item Gurobipy: Modeling language developed by the Gurobi Optimization to be used along with the Gurobi Optimizer. It allows to model continuous and mixed integer linear and quadratic programming problems. In this project we are only interested in the linear programming features.
 			\item Python-MIP: Open source modeling language developed as an academic initiative on Brazil that became part of the COIN-OR Foundation in 2019. Compatible with PyPy and with support to two important linear programming solvers, it is one of the options available on \SolveLP.
 		\end{itemize}
+
+	\subsubsection{Useful Links}
 		The user interested in read more about the modeling languages may find the following links useful:
 
 		$\bullet$ \url{https://developers.google.com/optimization}
@@ -785,6 +787,33 @@ Critics and suggestions can be sent to: \url{e-mail@domain.com}
 		Python-MIP's GitHub page.
 
 	\subsection{Available Solvers}
+
+	Each modeling language offers support to different optimization solvers. In this Sub-Section we present a brief description about them, and describe which solver can be used in combination with each modeling language. Most part of the solvers have easy-to-find webpages, where the owners/developers may clarify the less trivial doubts of the user. Please remember that part of the solvers require licenses to work, and that commercial uses of the solvers may required permission, even in the case of free for academic purposes solvers.
+
+	\subsubsection{OR-Tools}
+
+		\begin{itemize}
+			\item CLP: The COIN-OR Linear Programming solver. An open source project developed to solve continuous linear programming problems.
+			\item CBC: The COIN-OR Branch-and-Cut solver. An open source project developed to solve binary/integer/mixed-integer linear programming problems.
+			\item GLOP: An open source (continuous) linear programming solver developed by Google.
+			\item BOP: A free binary optimization solver.
+			\item SAT or CP\_SAT: The Google's CP-SAT solver. A constraint programming solver that uses SAT (satisfiability) methods.
+			\item SCIP: A free for academic, non-commercial purposes solver for linear programming problems, continuos, integer or mixed-integer.
+			\item GUROBI\_LP:
+			\item GUROBI or GUROBI\_MIP:
+			\item CPLEX\_LP:
+			\item CPLEX or CPLEX\_MIP:
+			\item XPRESS\_LP:
+			\item XPRESS or XPRESS\_MIP:
+			\item GLPK\_LP:
+			\item GLPK or GLPK\_MIP:
+		\end{itemize}
+
+	\subsubsection{Gurobipy}
+
+	\subsubsection{Python-MIP}
+
+		At the moment this manual was written, the Python-MIP official site was showing a message saying that Python-MIP is currently integrated with the C libraries of COIN-OR CBC solver and the commercial solver Gurobi, and that other solvers will be supported soon. The user may refer to the site to see if the support to any different solver was already made available in the last days. 
 
 
 	\subsection{Normal Classes}
