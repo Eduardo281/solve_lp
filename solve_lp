@@ -24,7 +24,7 @@ g_runtime = 0
 
 # Default arguments used by Solve_LP
 class DefaultArgumentsTuple(NamedTuple):
-    ACCEPTED_SOLVERS: list=["BOP", "CBC", "CLP", "CPLEX", "GLOP", "GLPK", "GUROBI", "PDLP", "SAT", "SCIP", "XPRESS"]
+    ACCEPTED_SOLVERS: list=["BOP", "CBC", "CLP", "CPLEX", "GLOP", "GLPK", "GUROBI", "PDLP", "CP-SAT", "SCIP", "XPRESS"]
     ACCEPTED_MODELING_LANGUAGES: list=["GUROBIPY", "OR-TOOLS", "PYTHON-MIP"]
     DEFAULT_MODELING_LANGUAGE_MAT_JSON: str="OR-TOOLS"
     DEFAULT_MODELING_LANGUAGE_LP_MPS: str="PYTHON-MIP"
@@ -1170,12 +1170,12 @@ def print_help_with_solvers_message() -> None:
     print("*) BOP: Boolean/Integer Problems solver developed by Google. A free option to face IP problems. It is recommended to always set a maximum solution time when using BOP!")
     print("*) CBC: COIN_OR Branch-and-Cut solver. It is a general purpose open-source MILP solver from COIN-OR.")
     print("*) CLP: COIN-OR Linear Programming Solver. It is an open-source LP solver from COIN-OR.")
+    print("*) CP-SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)")
     print("*) CPLEX: A solver developed by IBM that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.")
     print("*) GLOP: Google Linear Optimization Problems solver. Developed to solve only LP problems, it is an open source project made available by Google since 2014.")
     print("*) GLPK: GNU Linear Programming Kit. Requires user license. Free?")
     print("*) GUROBI: A solver developed by the Gurobi Optimization group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.")
     print("*) PDLP: Google First Order LP solver (...)")
-    print("*) SAT: A free option to solver IP problems (It is the Google Constraints Programming SAT-Based solver?)")
     print("*) SCIP: Solving Constraint Integer Programs. A non-commercial solver that can be used to solve general MILP models.")
     print("*) XPRESS:A solver developed by the FICO group that can be used to tackle MILP problems. It is a proprietary solver, and so users need to have a license to use.")
     print("Where...")
