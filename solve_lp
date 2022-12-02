@@ -26,14 +26,14 @@ g_runtime = 0
 class DefaultArgumentsTuple(NamedTuple):
     ACCEPTED_SOLVERS:                   list=["BOP", "CBC", "CLP", "CPLEX", "GLOP", "GLPK", "GUROBI", "PDLP", "CP-SAT", "SCIP", "XPRESS"]
     ACCEPTED_MODELING_LANGUAGES:        list=["GUROBIPY", "OR-TOOLS", "PYTHON-MIP"]
+    DEFAULT_SOLVING_TIME:               float=30
+    DEFAULT_MIP_GAP:                    float=10**(-5)
+    DEFAULT_DIGITS_ON_SOLUTION:         int=5
+    DEFAULT_NUM_THREADS:                int=1
     DEFAULT_MODELING_LANGUAGE_MAT_JSON: str="OR-TOOLS"
     DEFAULT_MODELING_LANGUAGE_LP_MPS:   str="PYTHON-MIP"
     DEFAULT_OR_TOOLS_SOLVER:            str="SCIP"
     DEFAULT_PYTHON_MIP_SOLVER:          str="CBC"
-    DEFAULT_SOLVING_TIME:               float=30
-    DEFAULT_DIGITS_ON_SOLUTION:         int=5
-    DEFAULT_NUM_THREADS:                int=1
-    DEFAULT_MIP_GAP:                    float=10**(-5)
     DEFAULT_INPUT_TYPE:                 str="infer"
 
 # Class to store the parameters set:
