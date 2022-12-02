@@ -8,8 +8,8 @@
 
 In a few words, **Solve_LP** solves MILP problems by calling powerful modeling languages/linear programming solvers through simple command line instructions, and so it's not a modeling language nor a MILP solver. More informations about it are being added into the `User_Guide.pdf` file.
 
-> **IMPORTANT NOTE:** We are still finishing **Solve_LP** documentation. The three references users may use at this time are:
->
-> - The `User_Guide.pdf` at the *User_Guide* folder;
-> - The `Example files` at the *Examples* folder;
-> - The CLI `--help` and `--help-with-solvers` arguments
+**IMPORTANT NOTE:** We are still finishing **Solve_LP** documentation. The three references users may use at this time are:
+
+- The `User_Guide.pdf` at the *User_Guide* folder;
+- The `Example files` at the *Examples* folder;
+- The CLI `--help` and `--help-with-solvers` arguments
