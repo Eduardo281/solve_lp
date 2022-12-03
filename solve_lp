@@ -73,16 +73,16 @@ params: Tuple) -> Tuple[pywraplp.Solver, dict, pywraplp.Objective, dict]:
     if(isinstance(ub_inputs, np.ndarray)):
         if(len(ub_inputs) != n):
             raise RuntimeError("Shape of ub array is incompatible with problem size!")
-    elif(isinstance(ub_inputs, float)):
-        ub_inputs = np.full(n, ub_inputs)
+    elif(isinstance(ub_inputs, (int, float))):
+        ub_inputs = np.full(n, ub_inputs, dtype=float)
     else:
         ub_inputs = np.full(n, infinity)
 
     if(isinstance(lb_inputs, np.ndarray)):
         if(len(lb_inputs) != n):
             raise RuntimeError("Shape of lb array is incompatible with problem size!")
-    elif(isinstance(lb_inputs, float)):
-        lb_inputs = np.full(n, lb_inputs)
+    elif(isinstance(lb_inputs, (int, float))):
+        lb_inputs = np.full(n, lb_inputs, dtype=float)
     else:
         lb_inputs = np.full(n, 0.0)
 
@@ -201,16 +201,16 @@ params: Tuple) -> Tuple[gp.Model, dict, None, dict]:
     if(isinstance(ub_inputs, np.ndarray)):
         if(len(ub_inputs) != n):
             raise RuntimeError("Shape of ub array is incompatible with problem size!")
-    elif(isinstance(ub_inputs, float)):
-        ub_inputs = np.full(n, ub_inputs)
+    elif(isinstance(ub_inputs, (int, float))):
+        ub_inputs = np.full(n, ub_inputs, dtype=float)
     else:
         ub_inputs = np.full(n, infinity)
 
     if(isinstance(lb_inputs, np.ndarray)):
         if(len(lb_inputs) != n):
             raise RuntimeError("Shape of lb array is incompatible with problem size!")
-    elif(isinstance(lb_inputs, float)):
-        lb_inputs = np.full(n, lb_inputs)
+    elif(isinstance(lb_inputs, (int, float))):
+        lb_inputs = np.full(n, lb_inputs, dtype=float)
     else:
         lb_inputs = np.full(n, 0.0)
 
@@ -354,16 +354,16 @@ params: Tuple) -> Tuple[mip.Model, dict, mip.LinExpr, dict]:
     if(isinstance(ub_inputs, np.ndarray)):
         if(len(ub_inputs) != n):
             raise RuntimeError("Shape of ub array is incompatible with problem size!")
-    elif(isinstance(ub_inputs, float)):
-        ub_inputs = np.full(n, ub_inputs)
+    elif(isinstance(ub_inputs, (int, float))):
+        ub_inputs = np.full(n, ub_inputs, dtype=float)
     else:
         ub_inputs = np.full(n, infinity)
 
     if(isinstance(lb_inputs, np.ndarray)):
         if(len(lb_inputs) != n):
             raise RuntimeError("Shape of lb array is incompatible with problem size!")
-    elif(isinstance(lb_inputs, float)):
-        lb_inputs = np.full(n, lb_inputs)
+    elif(isinstance(lb_inputs, (int, float))):
+        lb_inputs = np.full(n, lb_inputs, dtype=float)
     else:
         lb_inputs = np.full(n, 0.0)
 
