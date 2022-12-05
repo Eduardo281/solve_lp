@@ -1,32 +1,8 @@
-0) Finish the "cleaning the code" stage!: [OK!];
-
-        || 1) Add the MPS reader functionality; [OK!];
-        || 
-INPUTS  || 2) Define what will be the type of the matrix inputs (.mat?) [OK!];
-BRANCH  || 
-        || 3) Add an "infer input type" functionality to Solve_LP [OK!];
-        ||     -> First criteria: Input file extension [OK!];
-        ||     -> Second criteria: Try-and-error reading the data [OK!];
-
-        || 4) Define how a json-output file would looks like [OK!];
-        || 
-EXPORT  || 5) Add the json-export functionality [OK!];
-BRANCH  || 
-        || 6.1) Add the mps-export functionality (to convert models from other input styles) [OK!];
-        ||
-        || 6.2) Add the lp-export functionality (to convert models from other input styles) [OK!];
-        || 
-        || 7) Add the non-solve functionality (to only convert models and not to solve) [OK!];
-        ||
-        || ~EXTRA~) Add the "export log file" functionality [OK!].
-
-              || 8) Finish to add the comments inside the functions [[[PARTIAL!]]];
+              || *) Finish to add the comments inside the functions [[[PARTIAL!]]];
               || 
-              || 9) Finish the README.md file [[[PARTIAL!]]];
+              || *) Finish the README.md file [[[PARTIAL!]]];
 DOCUMENTATION || 
-BRANCH        || 10) Finish the User_Guide.pdf file [[[PARTIAL!]]];
-              || 
-              || 11) Finish the index.html file;
+STAGE         || *) Finish the User_Guide.pdf file [[[PARTIAL!]]];
               || 
               || 12.1) Define which license will be used in this project;
               || 
