@@ -724,7 +724,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="solve_lp", 
         allow_abbrev=False,
-        description = '''Solve_lp is a CLI to solve linear programming problems.''',
+        description = '''Solve_LP is a CLI to solve linear programming problems.''',
         epilog='''***This is a Python3 script distributed "as is", without warranty of any kind. 
         All the code were tested before it was made available, but errors may still appear.
         Please read the LICENSE file if you have any question about distributing/modifying files.***
@@ -733,7 +733,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument("-f", "--file", nargs=1, metavar="INPUT_FILE_PATH", type=str,
-        default=None, help= "Path to the data file to be used")
+        default=None, help= "Path to the input data file")
     parser.add_argument("-t", "--time", nargs = 1, metavar = "TOTAL_SOLVING_TIME", type = int,
         default=None, help = "Total allowed time for the solver to work (in seconds).")
     parser.add_argument("-g", "--gap", nargs = 1, metavar = "REL_MIP_GAP_VALUE", type = float,
@@ -1163,7 +1163,7 @@ def export_lp_model(solver, params: ParametersTuple):
 
 def print_help_with_solvers_message() -> None:
     print("*****")
-    print("Solve_LP uses more than one modeling language, and so it offers support to different linear optimization solvers.")
+    print("Solve_LP uses more than one modeling language, and it offers support to different linear optimization solvers.")
     print("Here we show a brief description of all the available solvers.")
     print("For more information please refer to the solvers/modeling languages documentations.")
     print()
