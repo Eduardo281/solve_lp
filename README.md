@@ -1,4 +1,4 @@
-# Solve_lp
+# Solve_LP
 
 ## A CLI to solve Linear Programming Problems
 
