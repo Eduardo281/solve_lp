@@ -13,3 +13,7 @@ In a few words, **Solve_LP** solves MILP problems by calling powerful modeling l
 - The `User_Guide.pdf` at the *User_Guide* folder;
 - The `Example files` at the *Examples* folder;
 - The CLI `--help` and `--help-with-solvers` arguments
+
+**DEVELOPMENT NOTES:** This project was initially developed as an study project, and the code still needs some more cleaning, as well as new features. If you find any bug or want to contribute with the **Solve\_LP** project, please submit your findings and/or suggestions in the issues section of this repository. Any help is welcome.
+
+**Contact:** If you want to talk directly to the developer, feel free to e-mail me at: eduardo281.dev@gmail.com.
