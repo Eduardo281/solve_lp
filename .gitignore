@@ -17,12 +17,5 @@ __pycache__/
 # Pipenv files
 Pipfile
 
-# Html and Css files
-*.html
-*.css
-
-# Pdf files
-*.pdf
-
 # Other files
 DELETE_ME.*
