@@ -478,7 +478,7 @@ Critics and suggestions can be sent to: \url{eduardo281.dev@gmail.com}
 	\begin{verbatim}
 		--gap/-g REL_MIP_GAP_VALUE
 	\end{verbatim}
-	} Integer programming problems may involve very deep Branch-and-Cut trees, which may cause the solution procedure to be very time consuming. When this is the case, the solver will try to reach sufficiently close to an optimal solution (in practice, almost any computational mathematics problem is solved approximately). The gap represents this tolerance level accepted by the solver to consider that a solution is optimal.
+	} Integer programming problems may involve very deep Branch-and-Cut trees, which may cause the solution procedure to be very time consuming. When this is the case, the solver will try to reach sufficiently close to an optimal solution (in practice, a lot of different computational mathematics problems are solved approximately). The gap represents this tolerance level accepted by the solver to consider that a solution is optimal.
 	
 	\textbf{Usage example:} 
 	\begin{verbatim}
@@ -569,7 +569,7 @@ Critics and suggestions can be sent to: \url{eduardo281.dev@gmail.com}
 	\begin{verbatim}
 		--export-mps-model MPS_FILEPATH
 	\end{verbatim}
-	} Used to export the input model in a .mps file.
+	} Used to export the input model as a .mps file.
 	
 	\textbf{Usage example:} 
 	\begin{verbatim}
@@ -580,7 +580,7 @@ Critics and suggestions can be sent to: \url{eduardo281.dev@gmail.com}
 	\begin{verbatim}
 		--export-lp-model LP_FILEPATH
 	\end{verbatim}
-	} Used to export the input model in a .lp file.
+	} Used to export the input model as a .lp file.
 	
 	\textbf{Usage example:} 
 	\begin{verbatim}
@@ -591,7 +591,7 @@ Critics and suggestions can be sent to: \url{eduardo281.dev@gmail.com}
 	\begin{verbatim}
 		--export-logfile LOGFILE_PATH
 	\end{verbatim}
-	} Used to export the solver log in a text file. There is not standard format to this file, but we suggest to use .log as file type.
+	} Used to export the solver log in a text file. There is no standard format to this file, but we suggest to use .log as its file type.
 
 	\textbf{Important Note:} This functionality was implemented by re-directing the solver log output to the logfile ``manually''. By the time this manual was written we did not find any error in this process, but this is still an experimental option.
 	
